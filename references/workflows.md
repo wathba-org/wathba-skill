@@ -36,6 +36,26 @@ wathba project select <projectId> --json
 - Tokens live in the OS keychain only. `--no-input` + login: the device flow still needs the user to visit the URL — surface the URL and code to the user (in their language), then `wathba auth complete` / re-check `auth status`.
 - Exit 3 anywhere later → session expired → `auth refresh`, else `login --device` again.
 
+### Workspace-agent onboarding
+
+When the agent needs to inspect the member's projects and capabilities and
+perform governed member operations, request the exact workspace profile:
+
+```sh
+wathba login --device --access workspace --wait --json
+wathba auth status --json
+wathba workspace show --json --no-input
+wathba capability catalog --json --no-input
+wathba capability list --project <projectId> --environment <environmentId> --json --no-input
+```
+
+The member approves one named, versioned profile in the Wathba portal. The CLI
+stores the resulting session only in the OS keychain and rejects `--token` and
+`WATHBA_TOKEN` for workspace commands. `AUTHORIZATION_REQUIRED` means stop and
+ask for profile approval; never construct a broader scope list. A backend `403`
+is authoritative. Project runtime execution is a different trust domain and
+requires a separate project API key.
+
 ## 2. Service lifecycle (platform-side on/off)
 
 ```sh
@@ -49,7 +69,7 @@ Branch on outcome:
 - `READY_TO_ACTIVATE` / `canActivate: true` → `wathba service activate <svc> --json`.
 Finish: `wathba service status <svc> --json` must show `ACTIVE` before you tell the user it's done.
 
-Deactivation: `service deactivate` → outcome `DEACTIVATION_PENDING` → `service wait <svc> --until removed --json` → `REMOVED`.
+Deactivation: `service deactivate` → outcome `DEACTIVATION_PENDING` → `service wait <svc> --until removed --json` → `REMOVED`. This is also the canonical capability-removal flow for workspace agents; direct pin removal is legacy browser-fresh and interactive-only.
 
 ## 3. Capability integration (writes into the user's app)
 

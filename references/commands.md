@@ -10,7 +10,7 @@ Binary: `wathba`. Root help: "Wathba is an agent-first CLI for installing, authe
 | `--no-input` | Never prompt or open a browser; print resume commands instead |
 | `--config <path>` | Config file override (default `$(UserConfigDir)/wathba/config.json`) |
 | `--api-url <url>` | API base (default `https://api.wathba.info`; dev `https://apidev.wathba.info`) |
-| `--token <t>` | Bearer token (rejected by `integrate` commands) |
+| `--token <t>` | Explicit credential for legacy member commands or project API-key operations; rejected by `integrate` and member-workspace commands |
 | `--project <id>` | Project context |
 | `--environment <env>` | Environment context |
 | `--idempotency-key <k>` | Replay-safe mutations |
@@ -42,8 +42,20 @@ Precedence: **CLI flags > env vars > config file > defaults**.
 - `wathba config get [key]` / `wathba config set <key> <value>` — non-secret local config only. Keys: `api_url`, `output`, `no_input`, `project`, `environment`, `timeout`, `install_base_url`. Tokens are NEVER stored in config.
 
 ### Auth (OAuth device flow; tokens in OS keychain)
-- `wathba login --device [--wait]` — only `--device` is supported. Integration-context flags: `--capability <code>` (repeatable), `--integration-framework`, `--integration-destination`, `--integration-cost-class`, `--integration-run-ref`.
+- `wathba login --device [--wait]` — existing member session.
+- `wathba login --device --access workspace [--wait]` — exact backend-owned `member_workspace.v1` profile; do not add `--capability`, integration-context flags, `--token`, or `WATHBA_TOKEN`.
+- Capability-specific login retains `--capability <code>` (repeatable), `--integration-framework`, `--integration-destination`, `--integration-cost-class`, and `--integration-run-ref`.
 - `wathba auth status` · `auth sessions` · `auth complete` · `auth refresh` · `auth logout` · `auth session revoke <sid>`.
+
+### Member workspace (OS keychain session only)
+- `wathba workspace show` — sanitized project inventory and next-command hints.
+- `wathba capability catalog` — sanitized capability catalogue.
+- `wathba capability list --project <id> [--environment <id>]` — project or environment capability state.
+- `wathba capability status <capabilityCode> --project <id> [--environment <id>]` — one capability from the same sanitized projection.
+
+These commands reject explicit tokens. `AUTHORIZATION_REQUIRED` means the
+member must approve the exact workspace profile; never retry with broader
+scopes. Runtime execution still needs a separate project API key.
 
 ### Projects
 - `wathba project create [--name <n>]` · `project list` · `project get <projectId>` · `project select <projectId>` (persists default project/environment).
@@ -58,6 +70,7 @@ Precedence: **CLI flags > env vars > config file > defaults**.
 - `wathba service skill <serviceCode>` — service-specific skill.
 
 ### Capabilities
+- `wathba capability catalog` / `capability list` / `capability status` — member-workspace discovery commands described above.
 - `wathba capability skill <capabilityCode>` — fetch the capability's skill.
 - `wathba capability verify <capabilityCode>` — verify a capability end-to-end.
 
@@ -100,14 +113,14 @@ Persistent flags: `--project-dir <dir>` (default `.`), `--credential-destination
 | 1 | General error | Read `error.hint` |
 | 2 | Invalid input / missing context | Fix flags/args; set project/environment |
 | 3 | Not authenticated | `wathba login --device --wait` |
-| 4 | Permission denied | Report to user; may need dashboard role |
+| 4 | Authorization required / permission denied | If `AUTHORIZATION_REQUIRED`, ask the member to approve `login --device --access workspace`; otherwise report the authoritative denial |
 | 5 | Not found | Check code/ID via `service list` / `api operations` |
 | 6 | Network / decode | Retry with backoff; check `--api-url` |
 | 7 | Timeout | Increase `--timeout`; use `service wait` |
 | 8 | Conflict / replay / activation race | Journal advanced elsewhere — run `status`, resume from reality |
 | 9 | Verification failed | Run `repair` or report |
 | 10 | Update failed | `self-update --rollback` if needed |
-| 11 | Protocol incompatible | `self-update`, then retry |
+| 11 | Protocol/profile unavailable | `self-update`; if `FEATURE_UNAVAILABLE`, the backend has not enabled the workspace profile and the CLI must not fall back to raw scopes |
 
 ## Installer contract (install.sh / install.ps1 / install.cmd)
 
