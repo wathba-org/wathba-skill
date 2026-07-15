@@ -83,9 +83,11 @@ Deactivation: `service deactivate` → outcome `DEACTIVATION_PENDING` → `servi
 - `torod_pickup_address_active`
 - `torod_wallet_funded`
 
-Historical `shipping.torod.v1` bindings may be read but never mutated or
-activated by this CLI release. A current v2 projection must contain exactly
-those four facts;
+Historical `shipping.torod.v1` setup, activation, and reconciliation mutations
+remain status-only/blocked. An already-active exact v1 runtime may continue
+only under its immutable pin and the original five live gates (the four above
+plus `torod_webhook_registered`); deactivation remains allowed.
+A current v2 projection must contain exactly those four facts;
 missing, extra, or webhook-substituted readiness is a protocol failure.
 
 In the `wathba.output.v1` success envelope, use only these stable status paths:
@@ -95,13 +97,20 @@ In the `wathba.output.v1` success envelope, use only these stable status paths:
 - `data.setup.requirements[]`, with each gate's `code`, `status`, `owner`, and
   `blocking`
 
+Every status evaluation pairs the strict Projects binding with the separate
+Provider Connections setup projection. Their project, environment, service,
+setup reference, and lifecycle pin must agree; neither response authorizes
+readiness alone.
+
 For current Torod, the authority paths must be `shipping.torod.v2` and `2`, and
 the requirement-code set must be exactly the four gates above. If the authority
 paths instead report `shipping.torod.v1` and `1`, keep the command status-only:
-do not run `setup`, `activate`, or `reconcile`. The CLI manifest contains no
-v1-to-v2 migration command, so report the blocked mutation and do not invent a
-replacement command. Deactivation remains a separate member-requested cleanup
-lifecycle and is not a migration path.
+do not run `setup`, `activate`, or `reconcile`. If the exact v1 binding is
+already active, runtime may continue only while its immutable pin and live
+readiness hold. Deactivation remains a separate allowed member-requested
+cleanup lifecycle. No v1-to-v2 migration is currently published, so report the
+blocked setup/activation/reconciliation mutation and do not invent a
+replacement command.
 
 New Torod registration (install-plugin) and existing-account login are done in
 the Wathba setup page. The member—not the agent—enters any Torod password,
@@ -118,6 +127,16 @@ outcomes exactly:
   server-side before completing the account gate.
 - login-plugin code `406` with `"The email or password isn't correct"`: keep
   the gate incomplete and show one generic invalid-credentials portal error.
+
+A successful login can create a fresh Torod app/store association. Treat login
+as a non-idempotent provider mutation: reuse a valid current connection when
+possible and reconcile an ambiguous result instead of blindly submitting it
+again.
+
+Submitting `webhook_url` during install or login is request evidence only. It
+is neither a v2 readiness gate nor proof of authenticated callback trust.
+Authenticated Merchant polling is authoritative; an unverifiable callback may
+only prompt polling and must not mutate readiness, shipment, or money state.
 
 Never request, repeat, persist, log, or expose any password, raw plugin
 response, `client_id`, or `client_secret_key` through the CLI or agent.
@@ -138,12 +157,36 @@ no request. The explicit key must be 1–255 characters and match
 `[A-Za-z0-9][A-Za-z0-9._:-]{0,254}`; use a new unique opaque value for each
 independent refresh.
 
+Torod removal uses the generic service lifecycle: `service deactivate` then
+`service wait shipping.torod --until removed`. The CLI never calls Torod's
+uninstall endpoint directly. Wathba confirms cleanup only from the verified
+exact HTTP/body `200` envelope with `status: true`, numeric code `200`, exact
+message `App uninstall successfully`, and no `data` or `plugin_data`. An
+unexpected or contradictory `2xx` remains `DEACTIVATION_PENDING`, and
+direct/workflow retries share one generation-fenced provider effect.
+
+### Torod member-app runtime safety
+
+Runtime shipment calls belong to the member application's trusted server and
+use a separate project API key. They are not CLI or agent-to-provider calls.
+The only staging-certified create path is sandbox `order_first`: one capped
+`order/create` command with a committed `amountMinor` maximum-exposure cap.
+Before that potentially cost-bearing call, Wathba requires budget authorization
+and a Wathba wallet reservation. Success additionally requires a non-hidden
+carrier, fulfillment evidence, and actual cost within the cap.
+
+`preselected_courier`, manual create-then-dispatch, and conditional follow-up
+dispatch remain disabled/unproven. Never call `order/ship/process` after
+`order/create`, including after a successful response. If create is pending or
+ambiguous, retain its `executionId` and poll the same Wathba execution; never
+create a new idempotency key, shipment, or dispatch as a probe.
+
 ## 3. Capability integration (writes into the user's app)
 
 Precondition: keychain device session (`integrate` rejects `--token`/`WATHBA_TOKEN`), and run from (or `--project-dir`) the app repo.
 
 ```sh
-wathba integrate <capabilityCode> --project-dir . --credential-destination local_mock --json --no-input
+wathba integrate <capabilityCode> --project-dir . --json --no-input
 ```
 Internally: local preflight/pins → setup start/status → guarded activation → owner actions → signed skill install + member-app patch → verification. It stops at typed pause points:
 - Member-owned `ACTION_REQUIRED` / `BLOCKED` → the output includes the exact context-bound `wathba service open ... --json --no-input` next command. Run it, give the Wathba URL to the member, then after completion:
@@ -168,31 +211,38 @@ canonical internal-preview-001 identity and matching MVP 001-006 release
 identities. Unknown, renamed, mismatched, and later identities require digest
 framing and fail closed if it is absent.
 
-For a governed destination instead of `local_mock`, set
-`--credential-destination` to a capability-supported kind and omit
-`--credential-destination-id` on the first run. The CLI inventories the exact
-project/environment and selects one currently certified destination. If more
-than one is ready, branch only on the exact
-`data.setupAction.destinations[].selectCommand` values it returns. If none is
-ready, remain `BLOCKED`; never guess an ID. Use the strict read-only
-`listCredentialDestinations`/`getCredentialDestination` diagnostic recipe in
-`references/commands.md` when the inventory needs inspection.
+The MVP has no member-cloud credential destination or destination-selection
+flags. Local contract/mock checks remain secret-free. A real authenticated
+check runs only after the member configures the exact project/environment key
+in their server-side application outside the agent's view.
 
 ## 4. Journal & locking semantics
 
 - Integration state: `$(UserConfigDir)/wathba/integrations` (schema `wathba.integration-journal.v1`/`.v2`). Service onboarding state: `$(UserConfigDir)/wathba/service-onboarding`. Project projection: `.wathba/integration.lock` (commit-worthy).
+- These files are authoritative only for local replay and patch state. Fresh
+  Projects binding and provider-setup reads remain authoritative for lifecycle
+  and readiness.
 - Exit 8 (`CONFLICT_OR_REPLAY_MISMATCH`) = another process advanced the journal. Do NOT retry the same command blindly — run `integrate status <cap> --json` (or `service status`) and continue from the reported state.
 - Use `--idempotency-key` on mutations you might have to retry (network flakes).
 
-## 5. API keys
+## 5. Project API keys
 
-```sh
-wathba key create --environment <env> --json     # or --env test for a test key
-wathba key list --json
-wathba key rotate <keyId> --overlap-seconds 300 --json   # overlap keeps old key valid during cutover
-wathba key activation complete <keyId> --json
-```
-Incident response: `key suspend` (temporary) · `key revoke` (permanent) · `key compromise <keyId>` (report + kill) · `key reactivate` (undo suspend). Key and activation-secret values remain redacted and agent-invisible; never ask the user to paste them into chat. Use a governed credential destination or protected portal handoff.
+After integration is ready, direct the authorized member to
+`/app/projects/<projectId>/keys` in the canonical Wathba portal. The member
+selects the exact test or production environment, creates the key, sees it
+once, and configures it in the server-side application outside the agent's
+view. Test and production use separate keys with the same create, rotate,
+suspend, revoke, and replace lifecycle.
+
+The agent may read safe masked status when needed, but never creates or rotates
+a key, observes the reveal, asks for the value, receives it in chat, or writes
+it into an agent-visible file. If the one-time value was not saved, the member
+creates or rotates a replacement. No member GCP/cloud account is required.
+
+Metadata-safe incident response remains available through `wathba key list` and
+`wathba key revoke|suspend|reactivate|compromise <keyId>`; those commands never
+return or recover key material. Follow their manifest-declared idempotency and
+member-authority requirements.
 
 ## 6. Self-update
 

@@ -36,7 +36,6 @@ Precedence: **CLI flags > env vars > config file > defaults**.
 - `wathba api call <operationId> [--input <file>]` — invoke an operation by ID.
 - `wathba docs [--output-dir docs/generated]` — generate command docs.
 - `wathba completions bash|zsh|fish|powershell` — shell completions.
-- `wathba protected probe [--api-key <k>]` — probe the protected execute route.
 
 ### Config
 - `wathba config get [key]` / `wathba config set <key> <value>` — non-secret local config only. Keys: `api_url`, `output`, `no_input`, `project`, `environment`, `timeout`, `install_base_url`. Tokens are NEVER stored in config.
@@ -44,7 +43,7 @@ Precedence: **CLI flags > env vars > config file > defaults**.
 ### Auth (OAuth device flow; tokens in OS keychain)
 - `wathba login --device [--wait]` — existing member session.
 - `wathba login --device --access workspace [--wait]` — exact backend-owned `member_workspace.v1` profile; do not add `--capability`, integration-context flags, `--token`, or `WATHBA_TOKEN`.
-- Capability-specific login retains `--capability <code>` (repeatable), `--integration-framework`, `--integration-destination`, `--integration-cost-class`, and `--integration-run-ref`.
+- Capability-specific login retains `--capability <code>` (repeatable), `--integration-framework`, `--integration-verification-mode`, `--integration-cost-class`, and `--integration-run-ref`.
 - `wathba auth status` · `auth sessions` · `auth complete` · `auth refresh` · `auth logout` · `auth session revoke <sid>`.
 
 ### Member workspace (OS keychain session only)
@@ -93,54 +92,38 @@ exact-byte verification; all unknown, renamed, mismatched, and later identities
 require digest framing.
 
 ### Integrate (app-side; requires keychain device session — rejects `--token`/`WATHBA_TOKEN`)
-Persistent flags: `--project-dir <dir>` (default `.`), `--credential-destination` (default `local_mock`), `--credential-destination-id`, `--acknowledge-migration-digest`.
+Persistent flags: `--project-dir <dir>` (default `.`), `--acknowledge-migration-digest`.
 - `wathba integrate <capabilityCode>` — start/continue integration.
 - `wathba integrate resume <capabilityCode>` — continue after `ACTION_REQUIRED`/`PENDING`/`BLOCKED`.
 - `wathba integrate status <capabilityCode>` · `verify` · `repair` · `upgrade` · `rollback` · `remove <capabilityCode>`.
 
-For `gcp_secret_manager` or `external_authenticated_probe`, omit
-`--credential-destination-id` on the first `integrate` call. The CLI selects
-one ready destination or, when several are ready, returns exact choices at
-`data.setupAction.destinations[]`; run a returned `selectCommand` unchanged.
-Never make up a destination ID.
+There is no `--credential-destination`, destination ID, member-cloud inventory,
+GCP target, or external credential delivery operation in the MVP. Contract/mock
+verification remains secret-free. A real authenticated check is valid only
+after the member has configured a project/environment key outside the agent's
+view.
 
-Read-only destination diagnostics use strict registered operations. First
-confirm the current schema with
-`wathba schema get listCredentialDestinations --json --no-input`, write this
-request envelope to a file, and call the inventory operation:
+### Project API keys
 
-```json
-{"path":{"projectId":"prj_...","environmentId":"env_..."}}
-```
+Project API-key creation and rotation are human portal actions at
+`/app/projects/<projectId>/keys`. The member chooses the exact test or production
+environment, sees a new value once, and configures it in their server-side
+application outside the agent's view. A successful idempotent replay may
+confirm that creation or rotation already completed without revealing the value
+again; if it was not saved, the member creates or rotates a replacement.
 
-```sh
-wathba api call listCredentialDestinations --input request.json --json --no-input
-```
+The CLI retains only metadata-safe lifecycle operations:
 
-Candidates are at `data.destinations[]`. A usable candidate must match the
-exact project, environment, and requested `kind`; have `state: "authorized"`;
-have `certification.status: "current"`; have a positive `proofVersion` equal
-to `certification.proofVersion`; and have a future
-`certification.expiresAt`. The CLI enforces all of these conditions itself.
-To inspect one known handle, confirm
-`wathba schema get getCredentialDestination --json --no-input`, use
-`{"path":{"destinationId":"dest_..."}}`, then call
-`wathba api call getCredentialDestination --input request.json --json --no-input`;
-the projection is at `data.destination`. Registration, reauthorization, and
-revocation are browser-fresh portal actions, not raw agent operations.
-
-### Keys
-- `wathba key create [--environment <e>] [--env test]`
 - `wathba key list`
 - `wathba key revoke|suspend|reactivate|compromise <keyId>`
-- `wathba key rotate <keyId> [--overlap-seconds 300]`
-- `wathba key activation complete <keyId>` · `key activation reissue-secret <keyId>`
 
-Project-key and activation-secret values remain agent-invisible/redacted. Key
-commands return safe metadata; never ask a member to paste a key into chat or
-pass it through an agent-visible flag. For dev testing set
-`WATHBA_API_URL=https://apidev.wathba.info` and use `--env test`, then use the
-governed credential-destination flow or a protected member-portal step.
+These operations never return key material. Mutations still require the
+authenticated member authority and an idempotency key according to the command
+manifest.
+
+Never ask a member to paste a key into chat, pass it through a flag, expose it
+in command output, or store it in an agent-visible file. Wathba does not require
+a member cloud account or secret-manager destination.
 
 ### Updates
 - `wathba update check [--channel stable|beta] [--version <v>]`
