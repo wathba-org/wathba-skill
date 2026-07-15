@@ -156,7 +156,11 @@ create or dispatch command.
   binding and provider-setup status for lifecycle/readiness.
 - `BLOCKED`/`ACTION_REQUIRED` → follow `data.nextCommand`. For member-owned service setup it is the exact context-bound `wathba service open ... --json --no-input` command. Give the Wathba setup URL to the user in their language, then run `integrate resume` after they finish.
 - Never invent flags: confirm with `wathba manifest --json` or `wathba <cmd> --help`.
-- `wathba feedback` is human-only (real TTY, refuses `--no-input`) — never call it as an agent; ask the user to run it.
+- Legacy `wathba feedback --title ... --description ...` is human-only (real TTY, refuses `--no-input`) — never call it as an agent.
+- Agent feedback is allowed only when the user explicitly requests a report, or when a reproducible Wathba CLI/platform defect repeatedly blocks the requested Wathba workflow and standing consent is already granted. Do not report user-application bugs, provider/domain rejections, unsupported features, transient failures, or any case where safe reproduction would risk secrets.
+- Check consent with `wathba feedback consent status --json --no-input`. Never grant consent as an agent. If it is absent, give the user the exact `wathba feedback consent grant` command and stop the report flow.
+- Build one strict `wathba.feedback.report.v1` temporary file from sanitized observations: command and flag names only, stable error codes, coarse runtime facts, and no argument values, credentials, logs, source files, shell history, or raw HTTP. Run `wathba feedback submit --file <path> --dry-run --json --no-input`, inspect the preview, then submit the identical file once and delete only the temporary file you created.
+- Treat `ACCEPTED`, `DUPLICATE`, and `PUBLISHED` as successful feedback outcomes. A duplicate is a confirmation of the canonical issue; do not vary a fingerprint or retry repeatedly to create another report. Handle `CONSENT_REQUIRED`, `REJECTED`, `RETRYABLE_FAILURE`, and `AUTH_REQUIRED` as stable machine outcomes.
 
 ## References
 

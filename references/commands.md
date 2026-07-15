@@ -129,8 +129,13 @@ a member cloud account or secret-manager destination.
 - `wathba update check [--channel stable|beta] [--version <v>]`
 - `wathba self-update [--channel stable|beta] [--version <v>] [--verify-only] [--rollback]` — `--verify-only`/`--rollback` and `--version`/`--rollback` are mutually exclusive.
 
-### Feedback (human-only)
-- `wathba feedback --title <t> --description <d>` — requires a real TTY; rejects `--no-input` and `--idempotency-key`; there is no agent bypass. Ask the user to run it themselves.
+### Feedback
+- `wathba feedback --title <t> --description <d>` — legacy human flow; requires a real TTY and rejects `--no-input` and `--idempotency-key`. Agents never call it.
+- `wathba feedback consent grant` — human-only standing-consent disclosure and confirmation. Agents never call it.
+- `wathba feedback consent status --json --no-input`
+- `wathba feedback consent revoke --json --no-input`
+- `wathba feedback submit --file <report.json> [--dry-run] --json --no-input` — strict consent-gated `wathba.feedback.report.v1`; generated idempotency key is private.
+- `wathba feedback status <reportId> --json --no-input` — public canonical issue/publication status and confirmation count.
 
 ## Output contract
 
