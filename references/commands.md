@@ -64,10 +64,12 @@ scopes. Runtime execution still needs a separate project API key.
 ### Services (platform-side lifecycle)
 - `wathba service list` — member-workspace keychain session only, as described above.
 - `wathba service setup <serviceCode>` — may return `SETUP_NOT_REQUIRED` (no mutation needed).
-- `wathba service status <serviceCode>`
+- `wathba service status <serviceCode>` — in the success envelope, lifecycle
+  authority is at `data.activationPolicy`; setup facts are at
+  `data.setup.requirements[]`.
 - `wathba service wait <serviceCode> --until ready|removed`
 - `wathba service open <serviceCode>` — exact channel-bound `/app/projects/<projectId>/services/<serviceCode>/setup?environmentId=<environmentId>` handoff, never a raw provider URL.
-- `wathba service reconcile shipping.torod --target references|wallet --idempotency-key <key>` — Torod-only fact recovery; provider response is discarded. The key is durably bound to the exact context, target, and request before the POST; reuse it only for that retry, and use a new key for a later refresh. No install/login/address/funding target exists.
+- `wathba service reconcile shipping.torod --target references|wallet --idempotency-key <key>` — Torod-only fact recovery; provider response is discarded. The key must be 1–255 characters and match `[A-Za-z0-9][A-Za-z0-9._:-]{0,254}`. It is durably bound to the exact context, target, and request before the POST; reuse it only for that retry, and use a new unique opaque key for a later refresh. No install/login/address/funding target exists.
 - `wathba service activate <serviceCode>` / `service deactivate <serviceCode>`
 - `wathba service skill <serviceCode>` — service-specific skill.
 
@@ -95,6 +97,37 @@ Persistent flags: `--project-dir <dir>` (default `.`), `--credential-destination
 - `wathba integrate <capabilityCode>` — start/continue integration.
 - `wathba integrate resume <capabilityCode>` — continue after `ACTION_REQUIRED`/`PENDING`/`BLOCKED`.
 - `wathba integrate status <capabilityCode>` · `verify` · `repair` · `upgrade` · `rollback` · `remove <capabilityCode>`.
+
+For `gcp_secret_manager` or `external_authenticated_probe`, omit
+`--credential-destination-id` on the first `integrate` call. The CLI selects
+one ready destination or, when several are ready, returns exact choices at
+`data.setupAction.destinations[]`; run a returned `selectCommand` unchanged.
+Never make up a destination ID.
+
+Read-only destination diagnostics use strict registered operations. First
+confirm the current schema with
+`wathba schema get listCredentialDestinations --json --no-input`, write this
+request envelope to a file, and call the inventory operation:
+
+```json
+{"path":{"projectId":"prj_...","environmentId":"env_..."}}
+```
+
+```sh
+wathba api call listCredentialDestinations --input request.json --json --no-input
+```
+
+Candidates are at `data.destinations[]`. A usable candidate must match the
+exact project, environment, and requested `kind`; have `state: "authorized"`;
+have `certification.status: "current"`; have a positive `proofVersion` equal
+to `certification.proofVersion`; and have a future
+`certification.expiresAt`. The CLI enforces all of these conditions itself.
+To inspect one known handle, confirm
+`wathba schema get getCredentialDestination --json --no-input`, use
+`{"path":{"destinationId":"dest_..."}}`, then call
+`wathba api call getCredentialDestination --input request.json --json --no-input`;
+the projection is at `data.destination`. Registration, reauthorization, and
+revocation are browser-fresh portal actions, not raw agent operations.
 
 ### Keys
 - `wathba key create [--environment <e>] [--env test]`

@@ -76,6 +76,15 @@ wathba integrate verify <capabilityCode> --json
 ```
 `integrate` requires a **keychain device session** — it rejects `--token`/`WATHBA_TOKEN`. With `--no-input` it never opens a browser. State lives in a journal (user config dir) + `.wathba/integration.lock` in the project; exit 8 means another process advanced it — run `integrate status` and continue from reality. Also: `integrate repair|upgrade|rollback|remove <cap>`.
 
+For a governed non-mock credential destination supported by the capability, pass
+`--credential-destination gcp_secret_manager` or
+`--credential-destination external_authenticated_probe` and initially omit
+`--credential-destination-id`. The CLI filters the exact project/environment
+inventory: one ready destination is selected automatically, while multiple
+ready destinations return exact
+`data.setupAction.destinations[].selectCommand` values. Never invent or guess a
+destination ID; see the workflow reference for read-only diagnostics.
+
 **Discover what exists / self-describe:** `wathba manifest --json` (full machine-readable command+schema contract), `wathba schema list`, `wathba api operations`, `wathba service list --json` (exact workspace keychain session), `wathba capability verify <code> --json`.
 
 **Keys:** `wathba key create|list|rotate|revoke|suspend|reactivate ...` — see reference.
@@ -85,6 +94,13 @@ wathba integrate verify <capabilityCode> --json
 `torod_account_connected`, `torod_reference_data_fresh`,
 `torod_pickup_address_active`, and `torod_wallet_funded`; it never substitutes
 provider webhook status for one of them.
+Read the pinned authority only from
+`data.activationPolicy.setupFlowCode` and
+`data.activationPolicy.setupFlowVersion` in `service status --json`; read gate
+facts only from `data.setup.requirements[]` (`code` and `status`). If those
+authority paths report `shipping.torod.v1` version 1, stop after observation:
+the binding is status-only and the CLI manifest exposes no v1-to-v2 migration
+command. Do not invent one.
 Install-plugin registration succeeds only on `status: true`, code `200`; Torod
 then emails the generated login details to the member. Its code `422` existing-
 email result switches the member to login instead of retrying registration.
@@ -100,7 +116,8 @@ shipping.torod --target references|wallet --idempotency-key <key> --json
 --no-input`; they discard provider responses. Reuse a recovery key only for the
 exact same member/project/environment/service context, target, and request;
 changed intent fails locally and a new refresh needs a new key. There is no CLI
-install, login, address, or funding target.
+install, login, address, or funding target. A reconciliation key must be 1–255
+characters and match `[A-Za-z0-9][A-Za-z0-9._:-]{0,254}`.
 
 ## When things go wrong
 

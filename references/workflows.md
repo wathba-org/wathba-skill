@@ -88,6 +88,21 @@ activated by this CLI release. A current v2 projection must contain exactly
 those four facts;
 missing, extra, or webhook-substituted readiness is a protocol failure.
 
+In the `wathba.output.v1` success envelope, use only these stable status paths:
+
+- `data.activationPolicy.setupFlowCode`
+- `data.activationPolicy.setupFlowVersion`
+- `data.setup.requirements[]`, with each gate's `code`, `status`, `owner`, and
+  `blocking`
+
+For current Torod, the authority paths must be `shipping.torod.v2` and `2`, and
+the requirement-code set must be exactly the four gates above. If the authority
+paths instead report `shipping.torod.v1` and `1`, keep the command status-only:
+do not run `setup`, `activate`, or `reconcile`. The CLI manifest contains no
+v1-to-v2 migration command, so report the blocked mutation and do not invent a
+replacement command. Deactivation remains a separate member-requested cleanup
+lifecycle and is not a migration path.
+
 New Torod registration (install-plugin) and existing-account login are done in
 the Wathba setup page. The member—not the agent—enters any Torod password,
 address/contact data, or wallet funding details. Wathba handles the provider
@@ -119,7 +134,9 @@ The CLI persists that binding before the POST; changed intent fails locally and
 a later independent refresh needs a new key. Each command sends the selected
 environment, discards the provider response, and returns normalized generic
 setup status. Install, login, address, and funding targets are invalid and make
-no request.
+no request. The explicit key must be 1–255 characters and match
+`[A-Za-z0-9][A-Za-z0-9._:-]{0,254}`; use a new unique opaque value for each
+independent refresh.
 
 ## 3. Capability integration (writes into the user's app)
 
@@ -151,7 +168,15 @@ canonical internal-preview-001 identity and matching MVP 001-006 release
 identities. Unknown, renamed, mismatched, and later identities require digest
 framing and fail closed if it is absent.
 
-For real credentials instead of mocks, set `--credential-destination` (+ `--credential-destination-id`) per the capability's docs.
+For a governed destination instead of `local_mock`, set
+`--credential-destination` to a capability-supported kind and omit
+`--credential-destination-id` on the first run. The CLI inventories the exact
+project/environment and selects one currently certified destination. If more
+than one is ready, branch only on the exact
+`data.setupAction.destinations[].selectCommand` values it returns. If none is
+ready, remain `BLOCKED`; never guess an ID. Use the strict read-only
+`listCredentialDestinations`/`getCredentialDestination` diagnostic recipe in
+`references/commands.md` when the inventory needs inspection.
 
 ## 4. Journal & locking semantics
 
