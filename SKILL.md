@@ -5,7 +5,7 @@ description: "Install and operate the Wathba (وثبة) CLI — the agent-first 
 
 # Wathba CLI
 
-`wathba` is an **agent-first** CLI (Go binary) for installing, authenticating, configuring, and verifying capabilities on the Wathba platform (`https://api.wathba.info`). It is designed to be driven by AI agents: deterministic JSON output, typed outcomes, machine-readable manifest, and resumable workflows.
+`wathba` is an **agent-first** CLI (Go binary) for installing, authenticating, configuring, and verifying capabilities on the Wathba platform (`https://api.wathba.info`; dev: `https://apidev.wathba.info`). It is designed to be driven by AI agents: deterministic JSON output, typed outcomes, machine-readable manifest, and resumable workflows.
 
 ## Language handling (Arabic / English)
 
@@ -66,24 +66,47 @@ wathba service activate <serviceCode> --json
 wathba service status <serviceCode> --json   # confirm outcome ACTIVE
 ```
 
-**Integrate a capability into the user's app** (writes code + credentials into the project):
+**Integrate a capability into the user's app** (writes signed code/config and governed credential references; never prints credentials):
 ```sh
 wathba integrate <capabilityCode> --project-dir . --json --no-input
-# stops with typed ACTION_REQUIRED / PENDING / BLOCKED and prints the exact resume command
+# member-owned ACTION_REQUIRED/BLOCKED prints an exact `wathba service open ...` command
+# after the member finishes the Wathba setup page:
 wathba integrate resume <capabilityCode> --json --no-input
 wathba integrate verify <capabilityCode> --json
 ```
 `integrate` requires a **keychain device session** — it rejects `--token`/`WATHBA_TOKEN`. With `--no-input` it never opens a browser. State lives in a journal (user config dir) + `.wathba/integration.lock` in the project; exit 8 means another process advanced it — run `integrate status` and continue from reality. Also: `integrate repair|upgrade|rollback|remove <cap>`.
 
-**Discover what exists / self-describe:** `wathba manifest --json` (full machine-readable command+schema contract), `wathba schema list`, `wathba api operations`, `wathba service list --json`, `wathba capability verify <code> --json`.
+**Discover what exists / self-describe:** `wathba manifest --json` (full machine-readable command+schema contract), `wathba schema list`, `wathba api operations`, `wathba service list --json` (exact workspace keychain session), `wathba capability verify <code> --json`.
 
 **Keys:** `wathba key create|list|rotate|revoke|suspend|reactivate ...` — see reference.
+
+**Torod (`logistics.shipping` → `shipping.torod`):** current setup is
+`shipping.torod.v2` version 2. The CLI requires exactly
+`torod_account_connected`, `torod_reference_data_fresh`,
+`torod_pickup_address_active`, and `torod_wallet_funded`; it never substitutes
+provider webhook status for one of them.
+Install-plugin registration succeeds only on `status: true`, code `200`; Torod
+then emails the generated login details to the member. Its code `422` existing-
+email result switches the member to login instead of retrying registration.
+login-plugin succeeds only on `status: true`, code `200`; code `406` remains a
+generic invalid-credentials error in the protected portal. Wathba seals every
+returned plugin credential server-side before completing the account gate; the
+CLI and agent receive neither the raw response nor any password or credential.
+Old `shipping.torod.v1` bindings are status-only. Registration/install-plugin
+and existing-user login/password are member-portal-only. If an
+already-connected setup is stuck
+on safe observations, the only recovery commands are `wathba service reconcile
+shipping.torod --target references|wallet --idempotency-key <key> --json
+--no-input`; they discard provider responses. Reuse a recovery key only for the
+exact same member/project/environment/service context, target, and request;
+changed intent fails locally and a new refresh needs a new key. There is no CLI
+install, login, address, or funding target.
 
 ## When things go wrong
 
 - Exit 3 → `wathba login --device --wait --json`, then retry.
 - Stuck/unknown state → `wathba doctor --json`, then the relevant `status` command; trust the journal, not your memory.
-- `BLOCKED`/`ACTION_REQUIRED` → the JSON `hint` and printed resume command tell you the exact next step; if it needs a human (browser approval, dashboard action), tell the user precisely what to do — in their language — then run `resume`.
+- `BLOCKED`/`ACTION_REQUIRED` → follow `data.nextCommand`. For member-owned service setup it is the exact context-bound `wathba service open ... --json --no-input` command. Give the Wathba setup URL to the user in their language, then run `integrate resume` after they finish.
 - Never invent flags: confirm with `wathba manifest --json` or `wathba <cmd> --help`.
 - `wathba feedback` is human-only (real TTY, refuses `--no-input`) — never call it as an agent; ask the user to run it.
 

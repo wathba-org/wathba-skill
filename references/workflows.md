@@ -8,7 +8,7 @@ Always run commands with `--json` (and `--no-input` unless you specifically want
 SETUP_NOT_REQUIRED ──────────────► activate ─► ACTIVE
 setup ─► PENDING ─► READY_TO_ACTIVATE ─► activate ─► ACTIVE
    │        │
-   │        ├─► ACTION_REQUIRED  (human/browser/dashboard step; JSON hint + printed resume command)
+   │        ├─► ACTION_REQUIRED  (member setup page; exact `service open` next command)
    │        └─► BLOCKED          (precondition failed; hint says what)
 deactivate ─► DEACTIVATION_PENDING ─► wait --until removed ─► REMOVED
 ```
@@ -33,6 +33,8 @@ wathba auth status --json               # confirm session
 wathba project create --name "my-app" --json
 wathba project select <projectId> --json
 ```
+- `project select` re-reads the project and persists its backend default
+  environment. It replaces a stale environment already present in local config.
 - Tokens live in the OS keychain only. `--no-input` + login: the device flow still needs the user to visit the URL — surface the URL and code to the user (in their language), then `wathba auth complete` / re-check `auth status`.
 - Exit 3 anywhere later → session expired → `auth refresh`, else `login --device` again.
 
@@ -59,17 +61,65 @@ requires a separate project API key.
 ## 2. Service lifecycle (platform-side on/off)
 
 ```sh
-wathba service list --json                       # find serviceCode
+wathba service list --json                       # find serviceCode; exact workspace keychain session
 wathba service setup <svc> --json
 ```
 Branch on outcome:
 - `SETUP_NOT_REQUIRED` → `wathba service activate <svc> --json` directly.
 - `PENDING` → `wathba service wait <svc> --until ready --json` (blocks; respects `--timeout`), or poll `service status`.
-- `ACTION_REQUIRED` → `wathba service open <svc> --json` gives a channel-validated dashboard URL; hand it to the user, then re-check `status`.
+- `ACTION_REQUIRED` → `wathba service open <svc> --json --no-input` gives the exact channel-validated Wathba setup URL with selected `environmentId`; hand it to the user, then re-check `status`.
 - `READY_TO_ACTIVATE` / `canActivate: true` → `wathba service activate <svc> --json`.
 Finish: `wathba service status <svc> --json` must show `ACTIVE` before you tell the user it's done.
 
 Deactivation: `service deactivate` → outcome `DEACTIVATION_PENDING` → `service wait <svc> --until removed --json` → `REMOVED`. This is also the canonical capability-removal flow for workspace agents; direct pin removal is legacy browser-fresh and interactive-only.
+
+### Torod setup and safe recovery
+
+`logistics.shipping` maps to `shipping.torod`. Current setup authority is
+`shipping.torod.v2` version 2 with exactly these four gates:
+
+- `torod_account_connected`
+- `torod_reference_data_fresh`
+- `torod_pickup_address_active`
+- `torod_wallet_funded`
+
+Historical `shipping.torod.v1` bindings may be read but never mutated or
+activated by this CLI release. A current v2 projection must contain exactly
+those four facts;
+missing, extra, or webhook-substituted readiness is a protocol failure.
+
+New Torod registration (install-plugin) and existing-account login are done in
+the Wathba setup page. The member—not the agent—enters any Torod password,
+address/contact data, or wallet funding details. Wathba handles the provider
+outcomes exactly:
+
+- install-plugin `status: true`, code `200`: seal the returned plugin
+  credentials server-side before completing `torod_account_connected`; Torod
+  emails the member's Torod email and generated password.
+- install-plugin code `422` with `email: "E-Mail already exist"`: offer
+  existing-account login and do not retry registration or create duplicate
+  data.
+- login-plugin `status: true`, code `200`: seal the returned credential bundle
+  server-side before completing the account gate.
+- login-plugin code `406` with `"The email or password isn't correct"`: keep
+  the gate incomplete and show one generic invalid-credentials portal error.
+
+Never request, repeat, persist, log, or expose any password, raw plugin
+response, `client_id`, or `client_secret_key` through the CLI or agent.
+
+For a connected setup stalled on safe observation only:
+
+```sh
+wathba service reconcile shipping.torod --target references --idempotency-key idem_... --json --no-input
+wathba service reconcile shipping.torod --target wallet --idempotency-key idem_... --json --no-input
+```
+
+Reuse the key only when retrying the exact same context, target, and request.
+The CLI persists that binding before the POST; changed intent fails locally and
+a later independent refresh needs a new key. Each command sends the selected
+environment, discards the provider response, and returns normalized generic
+setup status. Install, login, address, and funding targets are invalid and make
+no request.
 
 ## 3. Capability integration (writes into the user's app)
 
@@ -79,16 +129,27 @@ Precondition: keychain device session (`integrate` rejects `--token`/`WATHBA_TOK
 wathba integrate <capabilityCode> --project-dir . --credential-destination local_mock --json --no-input
 ```
 Internally: local preflight/pins → setup start/status → guarded activation → owner actions → signed skill install + member-app patch → verification. It stops at typed pause points:
-- `ACTION_REQUIRED` / `PENDING` / `BLOCKED` → the output includes the exact resume command (with `--no-input` it never opens a browser). Do the described step (or ask the user to), then:
+- Member-owned `ACTION_REQUIRED` / `BLOCKED` → the output includes the exact context-bound `wathba service open ... --json --no-input` next command. Run it, give the Wathba URL to the member, then after completion:
 ```sh
 wathba integrate resume <capabilityCode> --json --no-input
 ```
+- `PENDING` stays observational; follow the returned wait/status/resume command and never invent progress.
 Repeat resume until terminal. Then verify:
 ```sh
 wathba integrate verify <capabilityCode> --json    # exit 9 = verification failed → integrate repair
 wathba capability verify <capabilityCode> --json
 ```
 Maintenance: `integrate upgrade` (may need `--acknowledge-migration-digest`), `integrate rollback`, `integrate remove`.
+
+The signed install is fail-closed. Catalog 007 skill `1.0.6` must carry the
+`wathba.sha256-digest.v1` publisher-signature payload format on its canonical
+manifest and artifacts; the CLI independently verifies the domain-separated
+signature frame, exact content digest, trust chain, and revocation state.
+Never bypass a format/signature failure or substitute a local bundle. Legacy
+signatures without the field keep exact-byte verification only for the
+canonical internal-preview-001 identity and matching MVP 001-006 release
+identities. Unknown, renamed, mismatched, and later identities require digest
+framing and fail closed if it is absent.
 
 For real credentials instead of mocks, set `--credential-destination` (+ `--credential-destination-id`) per the capability's docs.
 
@@ -106,7 +167,7 @@ wathba key list --json
 wathba key rotate <keyId> --overlap-seconds 300 --json   # overlap keeps old key valid during cutover
 wathba key activation complete <keyId> --json
 ```
-Incident response: `key suspend` (temporary) · `key revoke` (permanent) · `key compromise <keyId>` (report + kill) · `key reactivate` (undo suspend). Secret material appears once in create/reissue output — deliver it to the user immediately; it is never stored by the CLI.
+Incident response: `key suspend` (temporary) · `key revoke` (permanent) · `key compromise <keyId>` (report + kill) · `key reactivate` (undo suspend). Key and activation-secret values remain redacted and agent-invisible; never ask the user to paste them into chat. Use a governed credential destination or protected portal handoff.
 
 ## 6. Self-update
 

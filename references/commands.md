@@ -52,20 +52,22 @@ Precedence: **CLI flags > env vars > config file > defaults**.
 - `wathba capability catalog` — sanitized capability catalogue.
 - `wathba capability list --project <id> [--environment <id>]` — project or environment capability state.
 - `wathba capability status <capabilityCode> --project <id> [--environment <id>]` — one capability from the same sanitized projection.
+- `wathba service list --project <id>` — service discovery from the same sanitized project-capability projection; the browser-only full service DTO is never used.
 
 These commands reject explicit tokens. `AUTHORIZATION_REQUIRED` means the
 member must approve the exact workspace profile; never retry with broader
 scopes. Runtime execution still needs a separate project API key.
 
 ### Projects
-- `wathba project create [--name <n>]` · `project list` · `project get <projectId>` · `project select <projectId>` (persists default project/environment).
+- `wathba project create [--name <n>]` · `project list` · `project get <projectId>` · `project select <projectId>` (refreshes the project and persists its current backend default environment; it replaces stale local environment state).
 
 ### Services (platform-side lifecycle)
-- `wathba service list`
+- `wathba service list` — member-workspace keychain session only, as described above.
 - `wathba service setup <serviceCode>` — may return `SETUP_NOT_REQUIRED` (no mutation needed).
 - `wathba service status <serviceCode>`
 - `wathba service wait <serviceCode> --until ready|removed`
-- `wathba service open <serviceCode>` — dashboard handoff (channel-validated URL, never a raw provider URL).
+- `wathba service open <serviceCode>` — exact channel-bound `/app/projects/<projectId>/services/<serviceCode>/setup?environmentId=<environmentId>` handoff, never a raw provider URL.
+- `wathba service reconcile shipping.torod --target references|wallet --idempotency-key <key>` — Torod-only fact recovery; provider response is discarded. The key is durably bound to the exact context, target, and request before the POST; reuse it only for that retry, and use a new key for a later refresh. No install/login/address/funding target exists.
 - `wathba service activate <serviceCode>` / `service deactivate <serviceCode>`
 - `wathba service skill <serviceCode>` — service-specific skill.
 
@@ -79,6 +81,15 @@ scopes. Runtime execution still needs a separate project API key.
 - `wathba skill install <skillId> --version <v> --digest sha256:<hex> [--target-dir <dir>]`
 - `wathba skill bootstrap install [--target-dir <dir>]` — (re)install the signed `wathba-integration` bootstrap skill.
 
+Catalog 007 skill `1.0.6` requires the domain-separated
+`wathba.sha256-digest.v1` publisher-signature format for its canonical manifest
+and every artifact. Missing/unknown format, downgrade, signature, digest, or
+revocation failure is terminal; never bypass it or retry through a
+caller-controlled source. Only canonical already-published internal-preview-001
+and matching MVP 001-006 identities may omit the format and retain legacy
+exact-byte verification; all unknown, renamed, mismatched, and later identities
+require digest framing.
+
 ### Integrate (app-side; requires keychain device session — rejects `--token`/`WATHBA_TOKEN`)
 Persistent flags: `--project-dir <dir>` (default `.`), `--credential-destination` (default `local_mock`), `--credential-destination-id`, `--acknowledge-migration-digest`.
 - `wathba integrate <capabilityCode>` — start/continue integration.
@@ -91,6 +102,12 @@ Persistent flags: `--project-dir <dir>` (default `.`), `--credential-destination
 - `wathba key revoke|suspend|reactivate|compromise <keyId>`
 - `wathba key rotate <keyId> [--overlap-seconds 300]`
 - `wathba key activation complete <keyId>` · `key activation reissue-secret <keyId>`
+
+Project-key and activation-secret values remain agent-invisible/redacted. Key
+commands return safe metadata; never ask a member to paste a key into chat or
+pass it through an agent-visible flag. For dev testing set
+`WATHBA_API_URL=https://apidev.wathba.info` and use `--env test`, then use the
+governed credential-destination flow or a protected member-portal step.
 
 ### Updates
 - `wathba update check [--channel stable|beta] [--version <v>]`
