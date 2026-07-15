@@ -24,9 +24,9 @@ Wathba (وثبة) serves the Arab developer community. Users write requests in A
 | صلّح / اصلح المشكلة | Repair | `wathba integrate repair <cap> --json` |
 | ارجع للنسخة القديمة / تراجع | Rollback | `integrate rollback` / `self-update --rollback` |
 | احذف / أزل التكامل | Remove | `wathba integrate remove <cap> --json` |
-| مفتاح / مفاتيح API / سوّي مفتاح | Keys | `wathba key create/list/... --json` |
-| بدّل / دوّر المفتاح | Rotate key | `wathba key rotate <keyId> --json` |
-| المفتاح انسرّب / انكشف | Compromised key | `wathba key compromise <keyId> --json` |
+| مفتاح / مفاتيح API / سوّي مفتاح | Project API key | Create in `/app/projects/<projectId>/keys`; safe metadata may be read with `wathba key list --json` |
+| بدّل / دوّر المفتاح | Rotate key | Direct the member to the same protected project-key portal page; the agent never sees the new value |
+| المفتاح انسرّب / انكشف | Compromised key | `wathba key compromise <keyId> --json`, then the member replaces it in the protected portal |
 | افحص / شخّص / وش المشكلة بالجهاز | Diagnose | `wathba doctor --json` |
 
 Domain nouns: الدفع/المدفوعات = payments · الرسائل/رمز التحقق = OTP messaging · الشحن/التوصيل = logistics/shipping · بيئة تجريبية = test environment · بيئة الإنتاج = production.
