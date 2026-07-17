@@ -29,6 +29,9 @@ keep commands, IDs, codes, URLs, and JSON fields in Latin script.
 
 ## Installation
 
+Wathba supports native installer scripts and the official zero-dependency npm
+package. Do not use Homebrew or customer GitHub Release assets directly:
+
 ```sh
 # macOS / Linux
 curl -fsSL https://install.wathba.info/install.sh | bash
@@ -37,7 +40,27 @@ curl -fsSL https://install.wathba.info/install.sh | bash
 irm https://install.wathba.info/install.ps1 | iex
 ```
 
-The installer verifies signed artifacts. Never bypass verification. Then run:
+```sh
+# npm on macOS, Linux, or Windows (Node.js 18.18+)
+npm install --global @wathba-cli/cli
+```
+
+The native installer writes the binary to `$HOME/.wathba/bin` and installs this
+skill plus the signed `wathba-integration` bootstrap skill. npm installs the
+same authenticated native binary inside `@wathba-cli/cli`, exposes `wathba`,
+and intentionally does not write agent skills outside the package. For npm,
+install them explicitly when needed:
+
+```sh
+wathba skill agent install --json --no-input
+wathba skill bootstrap install --json --no-input
+```
+
+Pin a native channel or version with `WATHBA_CHANNEL=beta` or
+`WATHBA_VERSION=v1.4.0`; use `@beta` or an exact npm version for npm. Update an
+npm-managed installation with `npm install --global @wathba-cli/cli@latest`,
+not `wathba self-update`. Both installation paths verify signed artifacts;
+never bypass verification. Then run:
 
 ```sh
 export PATH="$HOME/.wathba/bin:$PATH"
