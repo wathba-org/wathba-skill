@@ -29,20 +29,21 @@ keep commands, IDs, codes, URLs, and JSON fields in Latin script.
 
 ## Installation
 
-Wathba supports native installer scripts and the official zero-dependency npm
-package. Do not use Homebrew or customer GitHub Release assets directly:
+Prefer the official zero-dependency npm package; fall back to the native
+installer scripts only when npm (Node.js 18.18+) is unavailable or the npm
+install fails. Do not use Homebrew or customer GitHub Release assets directly:
 
 ```sh
-# macOS / Linux
-curl -fsSL https://install.wathba.info/install.sh | bash
-
-# Windows PowerShell
-irm https://install.wathba.info/install.ps1 | iex
+# Preferred: npm on macOS, Linux, or Windows (Node.js 18.18+)
+npm install --global @wathba-cli/cli
 ```
 
 ```sh
-# npm on macOS, Linux, or Windows (Node.js 18.18+)
-npm install --global @wathba-cli/cli
+# Fallback: macOS / Linux
+curl -fsSL https://install.wathba.info/install.sh | bash
+
+# Fallback: Windows PowerShell
+irm https://install.wathba.info/install.ps1 | iex
 ```
 
 The native installer writes the binary to `$HOME/.wathba/bin` and installs this
@@ -57,10 +58,15 @@ wathba skill bootstrap install --json --no-input
 ```
 
 Pin a native channel or version with `WATHBA_CHANNEL=beta` or
-`WATHBA_VERSION=v1.4.0`; use `@beta` or an exact npm version for npm. Update an
-npm-managed installation with `npm install --global @wathba-cli/cli@latest`,
-not `wathba self-update`. Both installation paths verify signed artifacts;
-never bypass verification. Then run:
+`WATHBA_VERSION=v1.4.0`; use `@beta` or an exact npm version for npm.
+
+Always bring the CLI to the latest release after a first install, and again
+before integrating any service: run `wathba update check --json`, and if an
+update is available, apply it with the method that owns the install — `npm
+install --global @wathba-cli/cli@latest` for npm-managed installs, `wathba
+self-update` for native installs (`wathba self-update` refuses npm-managed
+installs). Both installation paths verify signed artifacts; never bypass
+verification. Then run:
 
 ```sh
 export PATH="$HOME/.wathba/bin:$PATH"
@@ -167,6 +173,12 @@ subscriptions. Wathba registers supported provider webhooks using server-held
 credentials, verifies inbound callbacks, deduplicates and normalizes them, and
 delivers signed member events. Never request a provider webhook secret.
 
+Manage member endpoints with `wathba webhook register|list|verify|disable`
+and inspect delivery status with `wathba webhook deliveries`. The endpoint
+signing secret is portal-only; the CLI always redacts it. Follow
+`references/webhooks.md` for registration, signature verification,
+deduplication, and authoritative state confirmation.
+
 ## Troubleshooting
 
 - Authentication required: run `wathba login --no-input --json`, ask the member
@@ -177,10 +189,20 @@ delivers signed member events. Never request a provider webhook secret.
   resume only from the recorded context.
 - Protocol/signature failure: stop. Do not bypass verification.
 - Unknown command or flag: inspect `wathba manifest --json` or command help.
+- Wathba bug or unresolvable blocker: stop and tell the member what failed
+  and why, then offer to report it to Wathba. Prepare a sanitized,
+  member-safe summary with no secrets, tokens, or customer data.
+  Agent-submitted feedback is consent-gated: a human must grant standing
+  consent at an interactive terminal first, and without that consent the
+  member reviews and sends the report themselves with `wathba feedback`.
 
 ## References
 
 - `references/commands.md` — command and flag reference.
 - `references/workflows.md` — end-to-end operator-enablement, integration,
   runtime, and webhook workflows.
+- `references/payments.md` — payments capability runbook: checkout contract,
+  idempotency, status confirmation, refunds, modes, and verification.
+- `references/webhooks.md` — member webhook runbook: endpoint registration,
+  signature verification, deduplication, and delivery inspection.
 - `references/arabic-glossary.md` — Arabic intent mapping and response style.

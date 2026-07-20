@@ -93,6 +93,20 @@ The workspace profile includes `keys:read` and intentionally excludes
 compromise handling are protected portal actions. A workspace agent must not
 invoke them.
 
+## Webhooks
+
+- `wathba webhook register <url> --project <projectId> --environment <environmentId>`
+- `wathba webhook list --project <projectId>`
+- `wathba webhook verify <endpointId> <challenge>`
+- `wathba webhook disable <endpointId>`
+- `wathba webhook deliveries --project <projectId> [--endpoint <endpointId>] [--state <state>] [--limit <n>]`
+
+Register, verify, and disable are state-changing and require
+`--idempotency-key`. The endpoint signing secret is portal-only and always
+redacted; endpoint listings expose a URL hash, never the raw URL. Capability
+webhook readiness is authorized separately through `wathba integrate`
+(`authorize_webhook_readiness`). See `references/webhooks.md`.
+
 ## Updates
 
 - `wathba update check`

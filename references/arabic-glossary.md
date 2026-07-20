@@ -16,6 +16,7 @@ codes, capability codes, URLs, and JSON fields in Latin script.
 | كمّل / واصل | Resume | `wathba integrate resume <capabilityCode> --json --no-input` |
 | وش صار؟ / وين وصلنا؟ | Status | `integrate status` or `service status` |
 | تحقق / اختبر | Verify | `integrate verify` or `capability verify` |
+| رجّع / استرجع المبلغ | Refund | request the normalized refund with an `Idempotency-Key`, then poll its status (see `references/payments.md`) |
 | المفتاح انكشف | Contain key | direct the authorized human to contain and replace it in the protected portal |
 | افحص المشكلة | Diagnose | `wathba doctor --json` plus the relevant read-only status |
 
