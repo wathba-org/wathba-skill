@@ -76,6 +76,21 @@ wathba doctor --json
 
 ## Authenticate and select context
 
+When a portal-generated prompt supplies a pairing code, run:
+
+```sh
+wathba login --pairing-code <code> --wait --no-input --json
+wathba auth status --json
+wathba workspace show --json --no-input
+wathba project select <projectId> --environment <environmentId> --json
+```
+
+Tell the member to approve the computer on the Wathba page they already have
+open. Do not relay an approval URL or user code, and do not run `wathba auth
+complete`; the bound login waits for approval and stores the tokens itself.
+
+When no pairing code is supplied, use the manual fallback:
+
 ```sh
 wathba login --no-input --json
 # After the member approves the code in Wathba:
@@ -87,9 +102,9 @@ wathba project select <projectId> --environment <environmentId> --json
 
 The backend assigns the fixed `member_workspace.v2` profile; login never accepts
 raw scopes or a selectable profile. Tokens stay in the OS keychain. Workspace
-and integration commands reject `--token` and `WATHBA_TOKEN`. In an agent run,
-use `wathba login --no-input --json`, present its safe approval URL and code to
-the member, then use `wathba auth complete --no-input --json` after approval.
+and integration commands reject `--token` and `WATHBA_TOKEN`. In a manual agent
+run without a pairing code, present the safe approval URL and code to the member,
+then use `wathba auth complete --no-input --json` after approval.
 
 ## Service enablement
 
