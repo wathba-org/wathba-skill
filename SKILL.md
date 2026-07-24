@@ -137,13 +137,29 @@ wathba integrate <capabilityCode> \
 wathba integrate resume <capabilityCode> --project-dir . --json --no-input
 wathba integrate status <capabilityCode> --project-dir . --json --no-input
 wathba integrate verify <capabilityCode> --project-dir . --json --no-input
+wathba integrate verify <capabilityCode> --project-dir . --live-sandbox --json --no-input
 ```
 
-`integrate` first confirms the operator-enabled service projection. A disabled
-service causes no skill installation or project patch. Once enabled, the CLI
-verifies catalog pins, the signed manifest, signed skill, and signed patch
-recipe. It retains only member-owned budget and webhook actions, applies the
-patch, and verifies the result.
+`integrate` first confirms the service is enabled. `messaging.otp` (Wathba-managed
+email OTP) is self-serve: integrate enables it for the member itself and continues
+— no operator step. If an operator has disabled it, integrate is Blocked and it
+cannot be re-enabled from the CLI (operator-disable wins); any other enable failure
+returns ACTION_REQUIRED pointing the member to enable it from the portal. Provider
+services (Torod, Moyasar) still require the operator. A still-disabled service
+causes no skill installation or project patch. Once enabled, the CLI verifies
+catalog pins, the signed manifest, signed skill, and signed patch recipe. It
+retains only member-owned budget and webhook actions, applies the patch, and
+verifies the result.
+
+Verification is a ladder: `integrate verify` first runs the offline stub pass
+(type-check plus a mocked-transport invocation of every generated SDK method — no
+network, no message). Adding `--live-sandbox` then asks the platform to run the
+real `real_sandbox_send` probe on the sandbox environment and returns only
+member-safe evidence (execution ids, outcome codes). A platform that predates the
+mode returns a clean `verification_probe_mode_unsupported`; fall back to the stub.
+`messaging.otp` is Wathba-managed email OTP with two operations, `sendOtp`
+(`otp:send`) and `verifyOtp` (`otp:verify`); the generated module carries both
+`send` and `verify`.
 
 The signed manifest's full `operations[]` set is authoritative. New Torod,
 Moyasar, or Authenta operations do not require a hardcoded CLI update. Reject a

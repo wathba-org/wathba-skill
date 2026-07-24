@@ -40,8 +40,13 @@ wathba service status <serviceCode> \
 
 When disabled:
 
-- `messaging.otp.authenta` / Authentica: a Wathba operator enables it once for
-  the member.
+- `messaging.otp` (Wathba-managed email OTP): **self-serve** — `wathba integrate`
+  enables it for the member itself on the first run, then continues seamlessly.
+  No operator step. Exception: if an operator has explicitly disabled it for the
+  account, integrate reports OutcomeBlocked and it cannot be re-enabled from the
+  CLI (operator-disable wins). If self-enable fails for any other reason,
+  integrate returns ACTION_REQUIRED asking the member to enable it from the
+  portal (service page → Enable) — not the operator.
 - `shipping.torod`: a Wathba operator enables it once for the member.
 - the Moyasar-backed payment service: a Wathba operator enables it for the
   selected project.
@@ -86,6 +91,39 @@ wathba integrate verify <capabilityCode> --project-dir . --json --no-input
 
 On conflict, read status and resume from the recorded context. Do not invent a
 new run or retry a status-changing action with a different idempotency key.
+
+## 4b. Verify: offline stub, then live sandbox probe
+
+Verification is a ladder. Climb it in order and report the evidence at each rung;
+do not skip to the live probe.
+
+1. **Offline stub verify (always).** `wathba integrate verify <capabilityCode>`
+   type-checks the generated module and drives every generated SDK method against
+   a mocked transport that returns the expected local `409 cli_stub_expected`. No
+   network call, no credential, no message sent. This proves the wiring of every
+   operation the service exposes.
+2. **Live sandbox probe (opt-in).** Add `--live-sandbox`:
+
+   ```sh
+   wathba integrate verify <capabilityCode> \
+     --project-dir . --live-sandbox --json --no-input
+   ```
+
+   After the offline stub pass, the CLI asks the platform to run the real
+   `real_sandbox_send` probe on the project's sandbox environment. The platform
+   drives the actual spine end to end and returns only member-safe evidence
+   (execution ids, outcome codes, latencies) — never recipients, codes, or
+   payloads. A platform that does not support the mode returns a clean
+   `verification_probe_mode_unsupported`; report that and fall back to the stub —
+   it is not an integration failure.
+3. **Report the evidence.** Surface the returned facts and their evidence handles
+   as-is. Do not re-send an operation as a probe.
+
+`messaging.otp` is **Wathba-managed email OTP**: Wathba generates the code, sends
+the email, and verifies it internally. It exposes two operations — `sendOtp`
+(scope `otp:send`) and `verifyOtp` (scope `otp:verify`). The generated module
+carries both `send` and `verify`; the live sandbox probe exercises a real send
+followed by a real verify, entirely server-side.
 
 ## 5. Runtime operation discovery
 
