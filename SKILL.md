@@ -69,10 +69,23 @@ installs). Both installation paths verify signed artifacts; never bypass
 verification. Then run:
 
 ```sh
-export PATH="$HOME/.wathba/bin:$PATH"
+hash -r
+if ! command -v wathba >/dev/null 2>&1; then
+  export PATH="$PATH:$HOME/.wathba/bin"
+fi
+if command -v which >/dev/null 2>&1; then
+  which -a wathba
+else
+  command -v wathba
+fi
 wathba version --json
 wathba doctor --json
 ```
+
+Never prepend `$HOME/.wathba/bin` after an npm installation: that can shadow a
+newer npm-managed CLI with an older native binary. `doctor` reports the
+shell-selected executable and warns when another Wathba installation may be
+shadowed.
 
 ## Authenticate and select context
 
@@ -131,14 +144,25 @@ the CLI. Status and wait never mutate provider state.
 ## Integrate a capability
 
 ```sh
+wathba integrate explain <capabilityCode> --project-dir . --json --no-input
 wathba integrate <capabilityCode> \
   --project <projectId> --environment <environmentId> \
   --project-dir . --json --no-input
 wathba integrate resume <capabilityCode> --project-dir . --json --no-input
 wathba integrate status <capabilityCode> --project-dir . --json --no-input
+wathba integrate reset <capabilityCode> --project-dir . --json --no-input
 wathba integrate verify <capabilityCode> --project-dir . --json --no-input
 wathba integrate verify <capabilityCode> --project-dir . --live-sandbox --json --no-input
 ```
+
+The read-only explanation must pass before mutation. Supported targets are
+`generic_node_server`, `nextjs_server`, and `nestjs_fastify`; the actual runtime
+must be Node 24. npm and pnpm are supported. `package.json`, `tsconfig.json`,
+and a pinned TypeScript dependency are required. `engines.node` and
+`packageManager` declarations are optional because the CLI probes the actual
+executables. On rejection, act on the structured `detected`, `expected`,
+`missing`, and `remediation` fields. Known-good minimal packages for every
+supported framework are in `references/project-compatibility.md`.
 
 `integrate` first confirms the service is enabled. `messaging.otp` (Wathba-managed
 email OTP) is self-serve: integrate enables it for the member itself and continues
@@ -168,7 +192,10 @@ the signed bundle with a local one.
 
 Integration state is a minimal journal in the user config directory plus
 `.wathba/integration.lock` in the project. On a conflict, run `integrate status`
-and continue from current state instead of retrying blindly.
+and continue from current state instead of retrying blindly. For an incomplete
+run bound to the wrong project or environment, review the generated changes and
+use `integrate reset`; it restores only journal-proven CLI-owned changes and
+fails closed if a member file or lockfile changed.
 
 ## Runtime and API keys
 

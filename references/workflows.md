@@ -7,7 +7,15 @@ typed outcome.
 
 ```sh
 curl -fsSL https://install.wathba.info/install.sh | bash
-export PATH="$HOME/.wathba/bin:$PATH"
+hash -r
+if ! command -v wathba >/dev/null 2>&1; then
+  export PATH="$PATH:$HOME/.wathba/bin"
+fi
+if command -v which >/dev/null 2>&1; then
+  which -a wathba
+else
+  command -v wathba
+fi
 wathba doctor --json
 wathba login --no-input --json
 # After the member approves the code:
@@ -61,6 +69,19 @@ wathba service wait <serviceCode> --until enabled \
 Waiting is read-only and does not queue operator work.
 
 ## 4. Integrate an enabled service
+
+Run the read-only compatibility explanation before mutation:
+
+```sh
+wathba integrate explain <capabilityCode> \
+  --project-dir . --json --no-input
+```
+
+Supported targets are `generic_node_server`, `nextjs_server`, and
+`nestjs_fastify` on an actual Node 24 runtime. npm and pnpm are supported.
+`package.json`, `tsconfig.json`, and a pinned TypeScript dependency are
+required; `engines.node` and `packageManager` declarations are optional. The
+explanation returns `detected`, `expected`, `missing`, and `remediation`.
 
 ```sh
 wathba integrate <capabilityCode> \
