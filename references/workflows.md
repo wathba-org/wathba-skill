@@ -28,6 +28,15 @@ The user completes device approval. Tokens stay in the OS keychain. Never ask
 for a token in chat, send raw scopes, or widen the backend-owned
 `member_workspace.v2` profile.
 
+Stop before login if `doctor` returns `KEYRING_UNAVAILABLE`. On Linux, ask the
+member or host operator to provide a persistent user D-Bus session, a Secret
+Service provider, and an accessible unlocked login/default collection. The
+session must remain the same across login, approval, `auth complete`, and later
+commands; a separate ephemeral `dbus-run-session` per command loses that
+continuity. Do not install packages, start daemons, request sudo, edit shell
+startup files, or create plaintext credential files. A healthy doctor followed
+by `NOT_AUTHENTICATED` means only that login has not completed.
+
 ## 2. Select a project
 
 ```sh

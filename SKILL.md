@@ -26,6 +26,10 @@ keep commands, IDs, codes, URLs, and JSON fields in Latin script.
    examples, not availability claims. If a service is absent, do not advertise,
    inspect, install, or integrate it; treat a direct not-found response the same
    way.
+7. Treat `KEYRING_UNAVAILABLE` as a local credential-store infrastructure
+   failure and stop. Never create a plaintext fallback, never suggest
+   `WATHBA_CREDENTIAL_PROVIDER=file`, and never start daemons or modify the
+   member's shell automatically.
 
 ## Installation
 
@@ -118,6 +122,15 @@ raw scopes or a selectable profile. Tokens stay in the OS keychain. Workspace
 and integration commands reject `--token` and `WATHBA_TOKEN`. In a manual agent
 run without a pairing code, present the safe approval URL and code to the member,
 then use `wathba auth complete --no-input --json` after approval.
+
+Before login, require a successful `wathba doctor --json`. On Linux, the same
+persistent D-Bus user session, Secret Service provider, and accessible unlocked
+login/default collection must survive `login`, approval, `auth complete`, and
+later commands; do not create a fresh `dbus-run-session` for each command.
+Windows uses native Credential Manager and macOS uses native Keychain, with no
+Linux desktop requirement. `KEYRING_UNAVAILABLE` means that infrastructure is
+not usable; `NOT_AUTHENTICATED` means it is usable but no valid Wathba session
+exists.
 
 ## Service enablement
 

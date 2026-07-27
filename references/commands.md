@@ -19,6 +19,12 @@ environment variables, which override non-secret config.
 Raw calls accept only operations classified as agent-safe. Interactive-only,
 operator, provider-onboarding, and secret-bearing operations fail locally.
 
+Default `doctor` checks native credential-store readiness. On failure it returns
+`KEYRING_UNAVAILABLE` with stable platform, provider, reason, remediation, and
+retry details. On a healthy store, absence of a Wathba session is not a doctor
+failure; auth commands report `NOT_AUTHENTICATED` instead. `doctor --check
+jwks` retains the dedicated API/JWKS diagnostic.
+
 ## Authentication
 
 - `wathba login [--wait]`
@@ -30,7 +36,11 @@ operator, provider-onboarding, and secret-bearing operations fail locally.
 - `wathba auth session revoke <sessionId>`
 
 The backend assigns `member_workspace.v2`. Login accepts neither raw scopes nor
-a selectable profile. Tokens stay in the OS keychain.
+a selectable profile. Tokens stay in the OS keychain. Linux requires a
+persistent D-Bus user session, Secret Service provider, and accessible unlocked
+login/default collection. Windows uses Credential Manager and macOS uses
+Keychain. `WATHBA_CREDENTIAL_PROVIDER=file` is not supported, and plaintext
+token files are prohibited.
 
 ## Workspace and projects
 
