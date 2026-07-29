@@ -1,215 +1,70 @@
-# Wathba CLI workflows
+# Wathba read-only MCP workflow
 
-Always use `--json` and normally `--no-input`. Check both the exit code and the
-typed outcome.
+Use `--json` and normally `--no-input`. Keep credentials outside the agent.
 
-## 1. Fresh machine and workspace session
-
-```sh
-curl -fsSL https://install.wathba.info/install.sh | bash
-hash -r
-if ! command -v wathba >/dev/null 2>&1; then
-  export PATH="$PATH:$HOME/.wathba/bin"
-fi
-if command -v which >/dev/null 2>&1; then
-  which -a wathba
-else
-  command -v wathba
-fi
-wathba doctor --json
-wathba login --no-input --json
-# After the member approves the code:
-wathba auth complete --no-input --json
-wathba auth status --json
-wathba workspace show --json --no-input
-```
-
-The user completes device approval. Tokens stay in the OS keychain. Never ask
-for a token in chat, send raw scopes, or widen the backend-owned
-`member_workspace.v2` profile.
-
-Stop before login if `doctor` returns `KEYRING_UNAVAILABLE`. On Linux, ask the
-member or host operator to provide a persistent user D-Bus session, a Secret
-Service provider, and an accessible unlocked login/default collection. The
-session must remain the same across login, approval, `auth complete`, and later
-commands; a separate ephemeral `dbus-run-session` per command loses that
-continuity. Do not install packages, start daemons, request sudo, edit shell
-startup files, or create plaintext credential files. A healthy doctor followed
-by `NOT_AUTHENTICATED` means only that login has not completed.
-
-## 2. Select a project
+## 1. Discover MCP setup
 
 ```sh
-wathba project list --json --no-input
-wathba project select <projectId> --environment <environmentId> --json
-wathba capability list --project <projectId> --environment <environmentId> --json --no-input
+wathba mcp --api-url https://api.wathba.info --json
 ```
 
-Use the authoritative backend environment, not a guessed local value.
+The response contains setup for:
 
-## 3. Check operator-owned enablement
+- Replit: add a custom remote MCP URL and complete browser OAuth.
+- Claude Code: `claude mcp add --transport http wathba
+  https://api.wathba.info/mcp`, then authorize with `/mcp`.
+- Codex: `codex mcp add wathba --url https://api.wathba.info/mcp`, then
+  `codex mcp login wathba --scopes mcp:read`.
+- MCP Inspector: connect to the same Streamable HTTP endpoint and complete
+  OAuth.
+- Any other host: use Streamable HTTP, OAuth authorization code with PKCE, and
+  the `mcp:read` scope.
+
+Do not put a Wathba CLI token or project API key in the MCP host configuration.
+
+## 2. Read project and service facts
+
+Call `list_projects`, select the exact project ID, then call
+`get_project_setup` and `list_project_services`. For a selected service, call
+`get_service_integration_docs`, `get_service_operations`, and
+`get_service_troubleshooting` as needed.
+
+Treat returned service, skill, operation, cost, limit, and environment pins as
+authoritative. Missing, ambiguous, mismatched, or unknown facts fail closed.
+
+## 3. Detect the local repository
 
 ```sh
-wathba service list --project <projectId> --json --no-input
-wathba service status <serviceCode> \
-  --project <projectId> --environment <environmentId> --json --no-input
+wathba integrate inspect --project-dir . --json --no-input
 ```
 
-When disabled:
+Inspection does not upload or modify repository content. It recognizes
+TypeScript, JavaScript, Python, Java, Go, PHP, .NET, cURL-oriented, and unknown
+projects. Use the MCP SDK guide only for TypeScript/JavaScript; use its direct
+HTTP guide for every other language.
 
-- `messaging.otp` (Wathba-managed email OTP): **self-serve** — `wathba integrate`
-  enables it for the member itself on the first run, then continues seamlessly.
-  No operator step. Exception: if an operator has explicitly disabled it for the
-  account, integrate reports OutcomeBlocked and it cannot be re-enabled from the
-  CLI (operator-disable wins). If self-enable fails for any other reason,
-  integrate returns ACTION_REQUIRED asking the member to enable it from the
-  portal (service page → Enable) — not the operator.
-- `shipping.torod`: a Wathba operator enables it once for the member.
-- the Moyasar-backed payment service: a Wathba operator enables it for the
-  selected project.
+## 4. Implement and test
 
-Report this scope exactly. Do not attempt provider setup. If useful, observe:
+Patch the member application with its normal coding tools. Keep Wathba calls in
+trusted server-side code. Use local mocks and the test environment to validate
+the integration without exposing the key to the agent.
 
-```sh
-wathba service wait <serviceCode> --until enabled \
-  --project <projectId> --environment <environmentId> --json --no-input
-```
+MCP itself can be tested safely by connecting MCP Inspector, listing all six
+tools and three resources, then calling only read operations. Attempting an
+unknown tool or a mutating request must fail.
 
-Waiting is read-only and does not queue operator work.
+## 5. Hand off to the member
 
-## 4. Integrate an enabled service
+Report:
 
-Run the read-only compatibility explanation before mutation:
+- which project, environment, service, skill pin, and operation contract were
+  used;
+- which local tests passed;
+- what the member must do in the portal.
 
-```sh
-wathba integrate explain <capabilityCode> \
-  --project-dir . --json --no-input
-```
+The member creates the production environment, completes production approval,
+creates the one-time key, stores it directly in the trusted server secret
+store, and deploys. Do not ask the member to reveal the key.
 
-Supported targets are `generic_node_server`, `nextjs_server`, and
-`nestjs_fastify` on an actual Node 24 runtime. npm and pnpm are supported.
-`package.json`, `tsconfig.json`, and a pinned TypeScript dependency are
-required; `engines.node` and `packageManager` declarations are optional. The
-explanation returns `detected`, `expected`, `missing`, and `remediation`.
-
-```sh
-wathba integrate <capabilityCode> \
-  --project <projectId> --environment <environmentId> \
-  --project-dir . --json --no-input
-```
-
-The CLI performs local inspection and resolves the signed integration preview,
-then reads `getProjectCapabilityEnablementStatus` for the exact project,
-environment, and capability. If the strict status is not `enabled`, it
-stops before trust-state changes, package installation, or project patches.
-
-For an enabled service it:
-
-1. verifies signed catalog, manifest, skill, and recipe identities;
-2. persists the minimal resumable journal;
-3. completes only signed budget and webhook member actions;
-4. installs the signed skill and applies the signed patch; and
-5. verifies local integration.
-
-Continue interrupted work with:
-
-```sh
-wathba integrate status <capabilityCode> --project-dir . --json --no-input
-wathba integrate resume <capabilityCode> --project-dir . --json --no-input
-wathba integrate verify <capabilityCode> --project-dir . --json --no-input
-```
-
-On conflict, read status and resume from the recorded context. Do not invent a
-new run or retry a status-changing action with a different idempotency key.
-
-## 4b. Verify: offline stub, then live sandbox probe
-
-Verification is a ladder. Climb it in order and report the evidence at each rung;
-do not skip to the live probe.
-
-1. **Offline stub verify (always).** `wathba integrate verify <capabilityCode>`
-   type-checks the generated module and drives every generated SDK method against
-   a mocked transport that returns the expected local `409 cli_stub_expected`. No
-   network call, no credential, no message sent. This proves the wiring of every
-   operation the service exposes.
-2. **Live sandbox probe (opt-in).** Add `--live-sandbox`:
-
-   ```sh
-   wathba integrate verify <capabilityCode> \
-     --project-dir . --live-sandbox --json --no-input
-   ```
-
-   After the offline stub pass, the CLI asks the platform to run the real
-   `real_sandbox_send` probe on the project's sandbox environment. The platform
-   drives the actual spine end to end and returns only member-safe evidence
-   (execution ids, outcome codes, latencies) — never recipients, codes, or
-   payloads. A platform that does not support the mode returns a clean
-   `verification_probe_mode_unsupported`; report that and fall back to the stub —
-   it is not an integration failure.
-3. **Report the evidence.** Surface the returned facts and their evidence handles
-   as-is. Do not re-send an operation as a probe.
-
-`messaging.otp` is **Wathba-managed email OTP**: Wathba generates the code, sends
-the email, and verifies it internally. It exposes two operations — `sendOtp`
-(scope `otp:send`) and `verifyOtp` (scope `otp:verify`). The generated module
-carries both `send` and `verify`; the live sandbox probe exercises a real send
-followed by a real verify, entirely server-side.
-
-## 5. Runtime operation discovery
-
-The verified signed manifest's complete `operations[]` set is authoritative.
-Do not reduce Torod, Moyasar, or Authenta to operation names remembered by the
-agent or hardcoded in older CLI documentation.
-
-The trusted member server invokes Wathba with its project/environment API key.
-Wathba resolves the provider credential server-side and returns only a
-normalized member-safe response. The workspace session is not a runtime key.
-
-For pending or ambiguous status-changing calls, retain the Wathba execution ID
-and poll the same execution. Never repeat a payment, OTP, or shipment as a
-probe.
-
-## 6. Torod funding and shipping
-
-Torod enablement is shared across the member's projects. Funding is handled
-between the member and Torod through Torod's own operation; the CLI does not
-manage a Wathba wallet, funding link, or balance facts.
-
-All shipping operations published by Wathba are discovered from the signed
-Torod manifest. Provider credentials and raw Torod payloads remain server-side.
-
-## 7. Webhook delivery
-
-The member configures a Wathba webhook endpoint and subscriptions. The retained
-webhook readiness action verifies that member-facing configuration. Wathba then:
-
-1. registers supported provider webhooks with server-held credentials;
-2. authenticates and deduplicates inbound provider callbacks;
-3. normalizes the event; and
-4. sends a signed event to the member endpoint with retry tracking.
-
-Never request a provider signing secret or treat an unauthenticated callback as
-payment, shipment, or OTP truth.
-
-## 8. Project API key handoff
-
-Direct the authorized human to `/app/projects/<projectId>/keys`. They create the
-exact environment key, see it once, and configure it directly on their trusted
-server. The agent must not observe the reveal or ask the user to paste it.
-
-The workspace session may list safe key metadata only. If compromise is
-suspected, direct the authorized human to the protected portal to contain and
-replace the key; the agent must not invoke a key mutation.
-
-## 9. Report completion
-
-Tell the user:
-
-- which member/project/environment was used;
-- whether the service is operator-enabled;
-- which signed capability integration is ready;
-- whether budget or webhook action remains pending; and
-- the exact next safe action.
-
-Never claim enablement or integration success without the authoritative JSON
-outcome.
+Legacy `.wathba` journal or `READY` files are ignored. The CLI does not track
+integration progress or certify production readiness.

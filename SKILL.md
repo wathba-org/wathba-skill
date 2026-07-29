@@ -1,6 +1,6 @@
 ---
 name: wathba
-description: "Install and operate the Wathba (وثبة) CLI for credential-safe member workspace discovery, operator-enabled services, signed capability integration, runtime operation discovery, webhooks, and safe API-key metadata. Use whenever the user mentions Wathba, وثبة, wathba-cli, a Wathba service or capability, or asks in Arabic or English to connect OTP, payments, shipping, Moyasar, Torod, or Authenta through Wathba."
+description: "Install and operate the Wathba (وثبة) CLI and hosted read-only MCP for credential-safe member project discovery, pinned capability integration guidance, repository detection, webhooks, and safe API-key metadata. Use whenever the user mentions Wathba, وثبة, wathba-cli, Wathba MCP, a Wathba service or capability, or asks in Arabic or English to connect OTP, payments, shipping, Moyasar, Torod, or Authenta through Wathba."
 ---
 
 # Wathba CLI
@@ -30,6 +30,10 @@ keep commands, IDs, codes, URLs, and JSON fields in Latin script.
    failure and stop. Never create a plaintext fallback, never suggest
    `WATHBA_CREDENTIAL_PROVIDER=file`, and never start daemons or modify the
    member's shell automatically.
+8. Prefer the hosted read-only MCP for project and integration documentation.
+   It must never receive or return a test key, live key, or provider credential.
+   Project/environment/key creation and production approval remain human portal
+   actions.
 
 ## Installation
 
@@ -65,7 +69,7 @@ Pin a native channel or version with `WATHBA_CHANNEL=beta` or
 `WATHBA_VERSION=v1.4.0`; use `@beta` or an exact npm version for npm.
 
 Always bring the CLI to the latest release after a first install, and again
-before integrating any service: run `wathba update check --json`, and if an
+before using its MCP guidance: run `wathba update check --json`, and if an
 update is available, apply it with the method that owns the install — `npm
 install --global @wathba-cli/cli@latest` for npm-managed installs, `wathba
 self-update` for native installs (`wathba self-update` refuses npm-managed
@@ -119,8 +123,9 @@ wathba project select <projectId> --environment <environmentId> --json
 
 The backend assigns the fixed `member_workspace.v2` profile; login never accepts
 raw scopes or a selectable profile. Tokens stay in the OS keychain. Workspace
-and integration commands reject `--token` and `WATHBA_TOKEN`. In a manual agent
-run without a pairing code, present the safe approval URL and code to the member,
+commands reject `--token` and `WATHBA_TOKEN`. MCP uses a separate OAuth
+authorization flow and the narrow `mcp:read` scope. In a manual agent run
+without a pairing code, present the safe approval URL and code to the member,
 then use `wathba auth complete --no-input --json` after approval.
 
 Before login, require a successful `wathba doctor --json`. On Linux, the same
@@ -154,61 +159,57 @@ If the live inventory contains the service but it is not enabled, report the
 exact operator action from the output. Do not claim the member can fix it from
 the CLI. Status and wait never mutate provider state.
 
-## Integrate a capability
+## Use the hosted MCP
 
 ```sh
-wathba integrate explain <capabilityCode> --project-dir . --json --no-input
-wathba integrate <capabilityCode> \
-  --project <projectId> --environment <environmentId> \
-  --project-dir . --json --no-input
-wathba integrate resume <capabilityCode> --project-dir . --json --no-input
-wathba integrate status <capabilityCode> --project-dir . --json --no-input
-wathba integrate reset <capabilityCode> --project-dir . --json --no-input
-wathba integrate verify <capabilityCode> --project-dir . --json --no-input
-wathba integrate verify <capabilityCode> --project-dir . --live-sandbox --json --no-input
+wathba mcp --api-url https://api.wathba.info --json
 ```
 
-The read-only explanation must pass before mutation. Supported targets are
-`generic_node_server`, `nextjs_server`, and `nestjs_fastify`; the actual runtime
-must be Node 24. npm and pnpm are supported. `package.json`, `tsconfig.json`,
-and a pinned TypeScript dependency are required. `engines.node` and
-`packageManager` declarations are optional because the CLI probes the actual
-executables. On rejection, act on the structured `detected`, `expected`,
-`missing`, and `remediation` fields. Known-good minimal packages for every
-supported framework are in `references/project-compatibility.md`.
+The command prints deterministic setup for Replit, Claude Code, Codex, MCP
+Inspector, and any remote-MCP host. Authorize the host in the browser with the
+narrow `mcp:read` scope. The MCP exposes exactly these read-only tools:
 
-`integrate` first confirms the service is enabled. `messaging.otp` (Wathba-managed
-email OTP) is self-serve: integrate enables it for the member itself and continues
-— no operator step. If an operator has disabled it, integrate is Blocked and it
-cannot be re-enabled from the CLI (operator-disable wins); any other enable failure
-returns ACTION_REQUIRED pointing the member to enable it from the portal. Provider
-services (Torod, Moyasar) still require the operator. A still-disabled service
-causes no skill installation or project patch. Once enabled, the CLI verifies
-catalog pins, the signed manifest, signed skill, and signed patch recipe. It
-retains only member-owned budget and webhook actions, applies the patch, and
-verifies the result.
+- `list_projects`
+- `get_project_setup`
+- `list_project_services`
+- `get_service_integration_docs`
+- `get_service_operations`
+- `get_service_troubleshooting`
 
-Verification is a ladder: `integrate verify` first runs the offline stub pass
-(type-check plus a mocked-transport invocation of every generated SDK method — no
-network, no message). Adding `--live-sandbox` then asks the platform to run the
-real `real_sandbox_send` probe on the sandbox environment and returns only
-member-safe evidence (execution ids, outcome codes). A platform that predates the
-mode returns a clean `verification_probe_mode_unsupported`; fall back to the stub.
-`messaging.otp` is Wathba-managed email OTP with two operations, `sendOtp`
-(`otp:send`) and `verifyOtp` (`otp:verify`); the generated module carries both
-`send` and `verify`.
+Its resource templates are `wathba://projects/{projectId}/setup`,
+`wathba://projects/{projectId}/services/{serviceCode}/integration`, and
+`wathba://projects/{projectId}/services/{serviceCode}/operations`. Use the
+pinned facts returned by the tools; never infer a service, skill, operation, or
+production status.
 
-The signed manifest's full `operations[]` set is authoritative. New Torod,
-Moyasar, or Authenta operations do not require a hardcoded CLI update. Reject a
-signature, identity, digest, schema, or classification mismatch; never replace
-the signed bundle with a local one.
+## Detect and integrate the repository
 
-Integration state is a minimal journal in the user config directory plus
-`.wathba/integration.lock` in the project. On a conflict, run `integrate status`
-and continue from current state instead of retrying blindly. For an incomplete
-run bound to the wrong project or environment, review the generated changes and
-use `integrate reset`; it restores only journal-proven CLI-owned changes and
-fails closed if a member file or lockfile changed.
+```sh
+wathba integrate inspect --project-dir . --json --no-input
+wathba integrate <capabilityCode> --project-dir . --json --no-input
+```
+
+Both forms are read-only. They do not authenticate, make a network request,
+upload repository content, install a package, write source, or track progress.
+The second form returns `MCP_REQUIRED` and the same repository assessment.
+
+Detection covers TypeScript, JavaScript, Python, Java, Go, PHP, .NET,
+cURL-oriented, and unknown repositories. For TypeScript/JavaScript, follow the
+exact SDK pin returned by MCP. For every other language, follow its direct HTTP
+guide. Patch and test the member's application with the normal tools for that
+repository; Wathba does not claim a local `READY` state.
+
+Ignore legacy `.wathba/integration.lock` and `.wathba/integration.json`
+contents. To list them without deletion:
+
+```sh
+wathba integrate cleanup --project-dir . --json --no-input
+```
+
+After local tests pass, explain the portal handoff. The member creates the
+production environment, obtains required approval, creates the test or live API
+key, and puts it directly into the trusted server-side secret store. The agent
+must not ask the member to paste that key.
 
 ## Runtime and API keys
 
@@ -256,8 +257,8 @@ deduplication, and authoritative state confirmation.
   to approve it, then run `wathba auth complete --no-input --json`.
 - Disabled service: report whether the Wathba operator must enable it for the
   member or selected project; optionally use `service wait --until enabled`.
-- Integration conflict/drift: run `integrate status`, inspect the project, and
-  resume only from the recorded context.
+- Repository mismatch: run `wathba integrate inspect --project-dir . --json
+  --no-input`, then request the pinned MCP guide for the detected stack.
 - Protocol/signature failure: stop. Do not bypass verification.
 - Unknown command or flag: inspect `wathba manifest --json` or command help.
 - Wathba bug or unresolvable blocker: stop and tell the member what failed

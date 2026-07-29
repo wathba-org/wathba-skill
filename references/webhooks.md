@@ -34,13 +34,11 @@ wathba webhook list --project <projectId> --json
 wathba webhook disable <endpointId> --idempotency-key <key> --json
 ```
 
-## 2. Authorize webhook readiness
+## 2. Confirm portal configuration
 
-Capability launches that depend on webhooks still require the existing
-`authorize_webhook_readiness` owner action. It is requested by
-`wathba integrate <capabilityCode>` and decided by the member in the browser;
-these webhook commands never replace that decision. If readiness is missing,
-stale, denied, expired, or cancelled, the integration fails closed.
+The member reviews and approves any required webhook configuration in the
+Wathba portal. MCP may describe the requirement but cannot create the endpoint,
+approve readiness, or receive signing material.
 
 ## 3. Verify every delivery signature
 

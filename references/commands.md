@@ -68,20 +68,20 @@ Authenta/Authentica and Torod are enabled once per member by a Wathba operator.
 Moyasar is enabled per project. There are no CLI setup, browser-open,
 reconcile, activation, deactivation, provider-readiness, or funding commands.
 
-## Integration
+## Hosted MCP and repository detection
 
+- `wathba mcp [--api-url <url>]`
+- `wathba integrate inspect --project-dir <dir>`
 - `wathba integrate <capabilityCode> --project-dir <dir>`
-- `wathba integrate resume <capabilityCode> --project-dir <dir>`
-- `wathba integrate status <capabilityCode> --project-dir <dir>`
-- `wathba integrate verify <capabilityCode> --project-dir <dir>`
+- `wathba integrate cleanup --project-dir <dir>`
 
-Start and resume require the keychain workspace session. Integration stops
-without changing the project when operator enablement is missing. Once enabled,
-it installs only verified signed artifacts and discovers the complete runtime
-operation set from the signed manifest.
+`mcp` prints deterministic remote-MCP/OAuth setup for Replit, Claude Code,
+Codex, Inspector, and generic hosts. It does not authorize a host itself.
 
-Upgrade, rollback, removal, provider onboarding, wallet facts, and production
-promotion are not part of the MVP command surface.
+The `integrate` command family is local and read-only. It makes no Wathba API
+request, uploads no repository content, and writes no file. The capability form
+returns `MCP_REQUIRED`. `cleanup` lists legacy `.wathba` integration artifacts
+without deleting them.
 
 ## Skills
 
@@ -113,9 +113,8 @@ invoke them.
 
 Register, verify, and disable are state-changing and require
 `--idempotency-key`. The endpoint signing secret is portal-only and always
-redacted; endpoint listings expose a URL hash, never the raw URL. Capability
-webhook readiness is authorized separately through `wathba integrate`
-(`authorize_webhook_readiness`). See `references/webhooks.md`.
+redacted; endpoint listings expose a URL hash, never the raw URL. See
+`references/webhooks.md`.
 
 ## Updates
 

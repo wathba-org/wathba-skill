@@ -57,10 +57,11 @@ pending refund stays pending until the fetched status is terminal.
 
 ## 5. Test versus production mode
 
-`environmentId` selects test or production mode. Integrate and verify in the
-test environment first: create a test checkout, complete it, and confirm the
-fetched status. Only after that, switch the server configuration to the
-production environment key. Never mix environment IDs and keys.
+`environmentId` selects test or production mode. The member configures the test
+key directly in the application's trusted test secret store, then the
+application creates a test checkout and confirms the fetched status. Only after
+that, the member switches the deployed server to the production environment
+key. Never mix environment IDs and keys.
 
 ## 6. Never expose
 
@@ -72,18 +73,13 @@ store, or forward:
 - raw provider request or response payloads;
 - PAN, CVC, or any card data.
 
-The agent and member app only ever hold the Wathba project API key, and the
-agent sees only its safe metadata via `wathba key list`.
+Only the trusted member app holds the Wathba project API key. The agent sees
+only safe metadata via `wathba key list`.
 
 ## 7. Verify
 
-```sh
-wathba integrate verify <capabilityCode> --project-dir . --json --no-input
-wathba capability verify <capabilityCode> \
-  --project <projectId> --environment <environmentId> --json --no-input
-```
-
-A successful payments verification asserts that a test checkout link can be
-created with the member key and that its status can be fetched with the same
-key. It does not charge a card, complete a payment, or touch production. Report
-the typed outcome; never claim payments readiness without it.
+Use the repository's own tests with a mocked Wathba transport, then let the
+member run a controlled test-environment checkout from the trusted application.
+Confirm its status through the same application flow. Do not charge a real
+card, touch production, or ask to see the key. Report concrete test evidence;
+the CLI does not certify a `READY` state.
