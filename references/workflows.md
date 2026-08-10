@@ -1,4 +1,4 @@
-# Wathba read-only MCP workflow
+# Wathba governed MCP and CLI agent-workspace workflow
 
 Use `--json` and normally `--no-input`. Keep credentials outside the agent.
 
@@ -22,7 +22,26 @@ The response contains setup for:
 
 Do not put a Wathba CLI token or project API key in the MCP host configuration.
 
-## 2. Read project and service facts
+## 2. Recommend a service and resolve a project
+
+From the repository root, run:
+
+```sh
+wathba service recommend --project-dir . --json --no-input
+```
+
+The exact outbound `RepositoryProfileV1` is included in the result for audit.
+It contains only bounded identifiers, allowlisted evidence, architecture
+booleans, and environment-variable names. If there is no project, run the
+returned explicit `wathba project create` command with a stable idempotency key,
+then repeat recommendation with `--project <projectId>`. Recommendation itself
+never enables a service or creates a project.
+
+Through MCP, `recommend_services_for_repository` uses the same profile and
+policy. MCP `create_project` is the only mutation and requires separately
+approved `projects:create`; never request it when a project already exists.
+
+## 3. Read project and service facts
 
 Call `list_projects`, select the exact project ID, then call
 `get_project_setup` and `list_project_services`. For a selected service, call
@@ -32,28 +51,40 @@ Call `list_projects`, select the exact project ID, then call
 Treat returned service, skill, operation, cost, limit, and environment pins as
 authoritative. Missing, ambiguous, mismatched, or unknown facts fail closed.
 
-## 3. Detect the local repository
+## 4. Resolve the exact integration bundle
 
 ```sh
 wathba integrate inspect --project-dir . --json --no-input
+wathba integrate <capabilityCode> --project-dir . --project <projectId> --environment <environmentId> --json --no-input
 ```
 
 Inspection does not upload or modify repository content. It recognizes
 TypeScript, JavaScript, Python, Java, Go, PHP, .NET, cURL-oriented, and unknown
-projects. Use the MCP SDK guide only for TypeScript/JavaScript; use its direct
-HTTP guide for every other language.
+projects. `integrate` checks the exact project/environment/service/capability
+pins, signed artifacts, readiness, recipe, and verification profile, then
+installs the exact trusted skill by default. It never patches application code
+or calls a runtime operation.
 
-## 4. Implement and test
+## 5. Implement and verify
 
 Patch the member application with its normal coding tools. Keep Wathba calls in
-trusted server-side code. Use local mocks and the test environment to validate
-the integration without exposing the key to the agent.
+trusted server-side code. Inspect the pinned runtime projection with `wathba
+capability operations`, then validate local JSON without uploading it:
 
-MCP itself can be tested safely by connecting MCP Inspector, listing all six
-tools and three resources, then calling only read operations. Attempting an
-unknown tool or a mutating request must fail.
+```sh
+wathba capability validate <capabilityCode> --operation <operationId> --request request.json --project <projectId> --environment <environmentId> --json --no-input
+wathba capability verify <capabilityCode> --mode contract --idempotency-key <stable-key> --project <projectId> --environment <environmentId> --json --no-input
+```
 
-## 5. Hand off to the member
+Contract verification has no provider effect. Sandbox mode performs one
+governed real-sandbox probe and requires `--accept-provider-effect`.
+
+MCP itself can be tested safely by connecting MCP Inspector and listing all
+eight tools and three resources. Seven tools are read-only. Test
+`create_project` only in an approved no-project sandbox journey with a stable
+idempotency key; attempting an unknown or under-scoped mutation must fail.
+
+## 6. Hand off to the member
 
 Report:
 

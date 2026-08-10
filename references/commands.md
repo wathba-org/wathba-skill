@@ -45,7 +45,7 @@ token files are prohibited.
 ## Workspace and projects
 
 - `wathba workspace show`
-- `wathba project create --name <name>`
+- `wathba project create --name <name> --idempotency-key <stable-key> [--repository-profile-digest <sha256>]`
 - `wathba project list`
 - `wathba project get <projectId>`
 - `wathba project select <projectId> [--environment <environmentId>]`
@@ -53,7 +53,13 @@ token files are prohibited.
 - `wathba capability list --project <projectId> [--environment <environmentId>]`
 - `wathba capability status <capabilityCode> --project <projectId> [--environment <environmentId>]`
 - `wathba capability skill <capabilityCode>`
-- `wathba capability verify <capabilityCode>`
+- `wathba capability operations <capabilityCode> --project <projectId> --environment <environmentId>`
+- `wathba capability validate <capabilityCode> --operation <operationId> --request <file> --project <projectId> --environment <environmentId>`
+- `wathba capability verify <capabilityCode> --mode contract|sandbox --idempotency-key <stable-key> --project <projectId> --environment <environmentId>`
+
+Project creation is a dedicated keychain-workspace command. It creates one
+project plus one active sandbox and never creates a key, production resource,
+service binding, provider connection, or provider effect.
 
 ## Services
 
@@ -63,25 +69,29 @@ The service surface is read-only:
 - `wathba service status <serviceCode> --project <projectId> --environment <environmentId>`
 - `wathba service wait <serviceCode> --until enabled --project <projectId> --environment <environmentId>`
 - `wathba service skill <serviceCode> --project <projectId>`
+- `wathba service recommend --project-dir <dir> [--target <app>] [--project <projectId>]`
 
 Authenta/Authentica and Torod are enabled once per member by a Wathba operator.
 Moyasar is enabled per project. There are no CLI setup, browser-open,
 reconcile, activation, deactivation, provider-readiness, or funding commands.
 
-## Hosted MCP and repository detection
+## Hosted MCP and agent workspace
 
 - `wathba mcp [--api-url <url>]`
 - `wathba integrate inspect --project-dir <dir>`
-- `wathba integrate <capabilityCode> --project-dir <dir>`
+- `wathba integrate <capabilityCode> --project-dir <dir> --project <projectId> --environment <environmentId> [--no-install-skill]`
 - `wathba integrate cleanup --project-dir <dir>`
 
 `mcp` prints deterministic remote-MCP/OAuth setup for Replit, Claude Code,
 Codex, Inspector, and generic hosts. It does not authorize a host itself.
 
-The `integrate` command family is local and read-only. It makes no Wathba API
-request, uploads no repository content, and writes no file. The capability form
-returns `MCP_REQUIRED`. `cleanup` lists legacy `.wathba` integration artifacts
-without deleting them.
+Inspection and cleanup are local and read-only. Recommendation sends only a
+bounded, value-free `RepositoryProfileV1` to the shared catalog policy.
+`integrate` retrieves and strictly checks the pinned version 2 bundle and
+installs its exact signed skill by default. It never uploads source, patches the
+member app, executes a runtime operation, or tracks progress. Local validation
+uploads no request body. Sandbox verification requires
+`--accept-provider-effect`; contract verification has no provider effect.
 
 ## Skills
 
@@ -128,7 +138,11 @@ redacted; endpoint listings expose a URL hash, never the raw URL. See
 | 0 | Command completed; inspect the typed outcome |
 | 2 | Invalid input or missing context |
 | 3 | Authentication/authorization required |
-| 4 | Remote or transport failure |
-| 5 | Verification/protocol incompatibility |
-| 6 | Local install/filesystem failure |
+| 4 | Permission denied |
+| 5 | Not found |
+| 6 | Network error |
+| 7 | Timeout |
 | 8 | Conflict or replay mismatch; re-read status |
+| 9 | Verification failed or remains required |
+| 10 | Update failed |
+| 11 | Protocol incompatible; stop on contract drift |

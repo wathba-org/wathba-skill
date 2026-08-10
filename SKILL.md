@@ -1,6 +1,6 @@
 ---
 name: wathba
-description: "Install and operate the Wathba (وثبة) CLI and hosted read-only MCP for credential-safe member project discovery, pinned capability integration guidance, repository detection, webhooks, and safe API-key metadata. Use whenever the user mentions Wathba, وثبة, wathba-cli, Wathba MCP, a Wathba service or capability, or asks in Arabic or English to connect OTP, payments, shipping, Moyasar, Torod, or Authenta through Wathba."
+description: "Install and operate the Wathba (وثبة) CLI and governed MCP agent workspace for credential-safe repository discovery, explicit sandbox project creation, pinned capability integration, verification, webhooks, and safe API-key metadata. Use whenever the user mentions Wathba, وثبة, wathba-cli, Wathba MCP, a Wathba service or capability, or asks in Arabic or English to connect OTP, payments, shipping, Moyasar, Torod, or Authenta through Wathba."
 ---
 
 # Wathba CLI
@@ -30,10 +30,11 @@ keep commands, IDs, codes, URLs, and JSON fields in Latin script.
    failure and stop. Never create a plaintext fallback, never suggest
    `WATHBA_CREDENTIAL_PROVIDER=file`, and never start daemons or modify the
    member's shell automatically.
-8. Prefer the hosted read-only MCP for project and integration documentation.
-   It must never receive or return a test key, live key, or provider credential.
-   Project/environment/key creation and production approval remain human portal
-   actions.
+8. Prefer the governed MCP/CLI agent workspace for repository recommendation,
+   project facts, and pinned integration guidance. It must never receive or
+   return a test key, live key, or provider credential. Project creation is an
+   explicit, idempotent sandbox-only action; production environments, keys, and
+   production approval remain human portal actions.
 
 ## Installation
 
@@ -137,6 +138,15 @@ Linux desktop requirement. `KEYRING_UNAVAILABLE` means that infrastructure is
 not usable; `NOT_AUTHENTICATED` means it is usable but no valid Wathba session
 exists.
 
+If `workspace show` returns no project, do not invent an ID or leave the CLI
+workflow. Build a bounded recommendation first, then create one sandbox project
+explicitly with a stable idempotency key:
+
+```sh
+wathba service recommend --project-dir . --json --no-input
+wathba project create --name <name> --repository-profile-digest <digest> --idempotency-key <stable-key> --json --no-input
+```
+
 ## Service enablement
 
 First read the live service inventory. Wathba backoffice operators complete
@@ -153,6 +163,7 @@ wathba service list --project <projectId> --json --no-input
 wathba service status <serviceCode> --project <projectId> --environment <environmentId> --json --no-input
 wathba service wait <serviceCode> --until enabled --project <projectId> --environment <environmentId> --json --no-input
 wathba service skill <serviceCode> --project <projectId> --json --no-input
+wathba service recommend --project-dir . --project <projectId> --json --no-input
 ```
 
 If the live inventory contains the service but it is not enabled, report the
@@ -167,7 +178,7 @@ wathba mcp --api-url https://api.wathba.info --json
 
 The command prints deterministic setup for Replit, Claude Code, Codex, MCP
 Inspector, and any remote-MCP host. Authorize the host in the browser with the
-narrow `mcp:read` scope. The MCP exposes exactly these read-only tools:
+narrow `mcp:read` scope. The MCP exposes exactly eight tools:
 
 - `list_projects`
 - `get_project_setup`
@@ -175,6 +186,13 @@ narrow `mcp:read` scope. The MCP exposes exactly these read-only tools:
 - `get_service_integration_docs`
 - `get_service_operations`
 - `get_service_troubleshooting`
+- `recommend_services_for_repository`
+- `create_project`
+
+The first seven tools are read-only. `create_project` is the only mutation; it
+requires separately approved `projects:create`, a stable idempotency key, and
+creates only one project plus one active sandbox. Never request that scope when
+a project already exists. Recommendation never enables a service.
 
 Its resource templates are `wathba://projects/{projectId}/setup`,
 `wathba://projects/{projectId}/services/{serviceCode}/integration`, and
@@ -186,18 +204,36 @@ production status.
 
 ```sh
 wathba integrate inspect --project-dir . --json --no-input
-wathba integrate <capabilityCode> --project-dir . --json --no-input
+wathba service recommend --project-dir . --json --no-input
+wathba integrate <capabilityCode> --project-dir . --project <projectId> --environment <environmentId> --json --no-input
 ```
 
-Both forms are read-only. They do not authenticate, make a network request,
-upload repository content, install a package, write source, or track progress.
-The second form returns `MCP_REQUIRED` and the same repository assessment.
+Inspection is local and read-only. Recommendation sends only the strict,
+bounded, auditable `RepositoryProfileV1`: dependency identifiers, allowlisted
+feature signals, architecture booleans, and environment-variable names. It
+never sends source, file contents, absolute paths, `.env` values, credentials,
+git data, or archives, and it never enables a service.
+
+`integrate` retrieves and strictly validates the same
+`AgentIntegrationBundleV2` used by MCP, checks every project/environment/
+service/capability/artifact pin, and installs the exact trusted skill by
+default. It never patches member application code, uploads the repository,
+executes a runtime operation, or tracks progress. Use `--no-install-skill` to
+preview the signed install command without writing a skill.
 
 Detection covers TypeScript, JavaScript, Python, Java, Go, PHP, .NET,
-cURL-oriented, and unknown repositories. For TypeScript/JavaScript, follow the
-exact SDK pin returned by MCP. For every other language, follow its direct HTTP
-guide. Patch and test the member's application with the normal tools for that
-repository; Wathba does not claim a local `READY` state.
+cURL-oriented, and unknown repositories. Follow only the bundle's exact signed
+recipe or verified HTTP projection. Inspect runtime operations with `wathba
+capability operations`, validate a local JSON envelope with `wathba capability
+validate`, and run effect-free contract verification with:
+
+```sh
+wathba capability verify <capabilityCode> --mode contract --project <projectId> --environment <environmentId> --idempotency-key <stable-key> --json --no-input
+```
+
+Sandbox verification causes a bounded real provider effect and therefore also
+requires `--accept-provider-effect`. Patch and test the member application with
+its normal tools; Wathba does not claim a local `READY` state.
 
 Ignore legacy `.wathba/integration.lock` and `.wathba/integration.json`
 contents. To list them without deletion:
@@ -258,7 +294,8 @@ deduplication, and authoritative state confirmation.
 - Disabled service: report whether the Wathba operator must enable it for the
   member or selected project; optionally use `service wait --until enabled`.
 - Repository mismatch: run `wathba integrate inspect --project-dir . --json
-  --no-input`, then request the pinned MCP guide for the detected stack.
+  --no-input`, then `wathba service recommend --project-dir . --json
+  --no-input`; stop on an ambiguous target or stack.
 - Protocol/signature failure: stop. Do not bypass verification.
 - Unknown command or flag: inspect `wathba manifest --json` or command help.
 - Wathba bug or unresolvable blocker: stop and tell the member what failed

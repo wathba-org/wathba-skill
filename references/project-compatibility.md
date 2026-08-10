@@ -4,6 +4,7 @@ Run:
 
 ```sh
 wathba integrate inspect --project-dir . --json --no-input
+wathba service recommend --project-dir . --json --no-input
 ```
 
 The detector is local and read-only. It does not upload repository content,
@@ -26,6 +27,8 @@ Detection uses familiar repository markers such as `package.json`,
 `composer.json`, and `*.csproj`. It does not require a specific framework or
 package manager.
 
-Always request the pinned integration guide from the hosted MCP after
-detection. Do not reuse an old SDK version, service mapping, or operation list
-from a local file.
+After recommendation and explicit project/environment selection, run `wathba
+integrate <capabilityCode> --project-dir . --project <projectId> --environment
+<environmentId> --json --no-input`. It authenticates the exact pinned version 2
+bundle and signed skill. Do not reuse an old SDK version, service mapping, or
+operation list from a local file.
