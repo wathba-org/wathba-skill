@@ -1,6 +1,6 @@
 ---
 name: wathba
-description: "Install and operate the Wathba (وثبة) CLI and governed MCP agent workspace for credential-safe repository discovery, explicit sandbox project creation, pinned capability integration, verification, webhooks, and safe API-key metadata. Use whenever the user mentions Wathba, وثبة, wathba-cli, Wathba MCP, a Wathba service or capability, or asks in Arabic or English to connect OTP, payments, shipping, Moyasar, Torod, or Authenta through Wathba."
+description: "Install and operate the Wathba (وثبة) CLI and governed MCP agent workspace for credential-safe repository discovery, explicit sandbox project creation, pinned capability integration, verification, domain DNS and name-server proposals, webhooks, and safe API-key metadata. Use whenever the user mentions Wathba, وثبة, wathba-cli, Wathba MCP, a Wathba service or capability, or asks in Arabic or English to connect OTP, payments, shipping, domains, Moyasar, Souq T2, Torod, or Authenta through Wathba."
 ---
 
 # Wathba CLI
@@ -18,9 +18,13 @@ keep commands, IDs, codes, URLs, and JSON fields in Latin script.
    document, funding detail, or raw provider payload.
 4. Never invent a provider route or operation. Use `wathba manifest --json`,
    `wathba api operations --json`, and the verified signed service manifest.
-5. Service onboarding is operator-owned for the MVP. Do not search for or
-   invent member `setup`, `open`, `reconcile`, `activate`, or `deactivate`
-   commands.
+5. Service onboarding is operator-owned for the MVP. Provider credentials and
+   readiness stay operator-owned; do not search for or invent member `setup`,
+   `open`, `reconcile`, `activate`, or `deactivate` commands.
+   Do not run `service integrate` for `domains.souq-t2` until it appears in the
+   signed service inventory. Domain read/preview commands remain control-plane
+   operations; availability is never purchase authority, mutation approval, or
+   provider readiness.
 6. Treat `wathba service list --json --no-input` as the only current service
    inventory. Named services in these bundled references are integration
    examples, not availability claims. If a service is absent, do not advertise,
@@ -122,7 +126,7 @@ wathba workspace show --json --no-input
 wathba project select <projectId> --environment <environmentId> --json
 ```
 
-The backend assigns the fixed `member_workspace.v2` profile; login never accepts
+The backend assigns the fixed `member_workspace.v3` profile; login never accepts
 raw scopes or a selectable profile. Tokens stay in the OS keychain. Workspace
 commands reject `--token` and `WATHBA_TOKEN`. MCP uses a separate OAuth
 authorization flow and the narrow `mcp:read` scope. In a manual agent run
@@ -263,6 +267,23 @@ agent must not invoke them or seek a broader token.
 The runtime path is member app → Wathba → server-side provider credential →
 provider → normalized response. The agent never calls the provider directly.
 
+## Project domains
+
+Domain registration, legal-profile entry, search, purchase confirmation, and
+approval live in the member portal. They are control-plane operations, so do
+not run `wathba integrate domains.management` and never ask for a national ID,
+CR number, supporting document, provider credential, or payment detail.
+
+The CLI can read project domains and normalized DNS/name-server state. It may
+preview and request one exact DNS record change or one exact name-server
+replacement. A request returns `outcome: approval_required`, an immutable
+action reference, and the canonical member-portal URL. It is not provider
+success. Never claim completion until `wathba domain action get` reports the
+owner-confirmed terminal state.
+
+Use `references/domains.md` for the complete file shapes, preview/request
+sequence, idempotency rule, and portal handoff.
+
 ## Torod
 
 Only when the live inventory contains `shipping.torod`, Torod is
@@ -312,6 +333,8 @@ deduplication, and authoritative state confirmation.
   runtime, and webhook workflows.
 - `references/payments.md` — payments capability runbook: checkout contract,
   idempotency, status confirmation, refunds, modes, and verification.
+- `references/domains.md` — project domain, DNS, name-server, proposal, and
+  member-portal approval runbook.
 - `references/webhooks.md` — member webhook runbook: endpoint registration,
   signature verification, deduplication, and delivery inspection.
 - `references/arabic-glossary.md` — Arabic intent mapping and response style.

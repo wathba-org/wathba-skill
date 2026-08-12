@@ -35,7 +35,7 @@ jwks` retains the dedicated API/JWKS diagnostic.
 - `wathba auth sessions`
 - `wathba auth session revoke <sessionId>`
 
-The backend assigns `member_workspace.v2`. Login accepts neither raw scopes nor
+The backend assigns `member_workspace.v3`. Login accepts neither raw scopes nor
 a selectable profile. Tokens stay in the OS keychain. Linux requires a
 persistent D-Bus user session, Secret Service provider, and accessible unlocked
 login/default collection. Windows uses Credential Manager and macOS uses
@@ -125,6 +125,22 @@ Register, verify, and disable are state-changing and require
 `--idempotency-key`. The endpoint signing secret is portal-only and always
 redacted; endpoint listings expose a URL hash, never the raw URL. See
 `references/webhooks.md`.
+
+## Project domains
+
+- `wathba domain list --project <projectId>`
+- `wathba domain dns list <domainId> --project <projectId>`
+- `wathba domain dns preview <domainId> --change <file> --domain-version <n> --zone-version <n> --project <projectId>`
+- `wathba domain dns request <domainId> --change <file> --domain-version <n> --zone-version <n> --preview-digest <sha256> --idempotency-key <stable-key> --project <projectId>`
+- `wathba domain nameserver list <domainId> --project <projectId>`
+- `wathba domain nameserver preview <domainId> --servers <file> --domain-version <n> --zone-version <n> --project <projectId>`
+- `wathba domain nameserver request <domainId> --servers <file> --domain-version <n> --zone-version <n> --preview-digest <sha256> --idempotency-key <stable-key> --project <projectId>`
+- `wathba domain action get <actionId> --project <projectId>`
+
+The CLI reads and proposes only. It has no registration, purchase, approval,
+dispatch, registrant-profile, national-ID, CR, document, or provider-credential
+command. Request output is `approval_required`; the member reviews and decides
+the immutable action in the returned portal URL. See `references/domains.md`.
 
 ## Updates
 
