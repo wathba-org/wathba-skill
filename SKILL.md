@@ -182,7 +182,7 @@ wathba mcp --api-url https://api.wathba.info --json
 
 The command prints deterministic setup for Replit, Claude Code, Codex, MCP
 Inspector, and any remote-MCP host. Authorize the host in the browser with the
-narrow `mcp:read` scope. The MCP exposes exactly eight tools:
+narrow `mcp:read` scope. The base grant exposes exactly eight tools:
 
 - `list_projects`
 - `get_project_setup`
@@ -193,16 +193,33 @@ narrow `mcp:read` scope. The MCP exposes exactly eight tools:
 - `recommend_services_for_repository`
 - `create_project`
 
-The first seven tools are read-only. `create_project` is the only mutation; it
-requires separately approved `projects:create`, a stable idempotency key, and
-creates only one project plus one active sandbox. Never request that scope when
-a project already exists. Recommendation never enables a service.
+The first seven tools are read-only. `create_project` requires separately
+approved `projects:create`, a stable idempotency key, and creates only one
+project plus one active sandbox. Never request that scope when a project
+already exists. Recommendation never enables a service.
 
-Its resource templates are `wathba://projects/{projectId}/setup`,
+Domain management is a separate, opt-in MCP profile. Do not request it during
+ordinary integration setup. When the member explicitly asks for it, use the
+least-privilege command printed in `domainManagement.commands`:
+
+- `mcp:domains:read` adds domain, DNS-zone, name-server, preview, and action
+  reads.
+- `mcp:domains:dns:request` adds only `request_domain_dns_change` and requires
+  the domain read scope.
+- `mcp:domains:nameservers:request` adds only
+  `request_domain_nameserver_change` and requires the domain read scope.
+
+The two request tools create immutable `approval_pending` actions only. They
+never approve or dispatch a provider change; the member reviews the exact diff
+in the portal. MCP never registers or purchases a domain, accepts legal terms,
+or handles registrant identity data.
+
+The base resource templates are `wathba://projects/{projectId}/setup`,
 `wathba://projects/{projectId}/services/{serviceCode}/integration`, and
-`wathba://projects/{projectId}/services/{serviceCode}/operations`. Use the
-pinned facts returned by the tools; never infer a service, skill, operation, or
-production status.
+`wathba://projects/{projectId}/services/{serviceCode}/operations`. The domain
+read grant adds the three templates listed in `domainManagement.resourceTemplates`.
+Use the pinned facts returned by the tools; never infer a service, skill,
+operation, or production status.
 
 ## Detect and integrate the repository
 

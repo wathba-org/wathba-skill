@@ -84,6 +84,11 @@ reconcile, activation, deactivation, provider-readiness, or funding commands.
 
 `mcp` prints deterministic remote-MCP/OAuth setup for Replit, Claude Code,
 Codex, Inspector, and generic hosts. It does not authorize a host itself.
+The base grant requests only `mcp:read`. Its `domainManagement` block lists
+separately consented read, DNS-request, and name-server-request scopes, the
+scope-filtered tools/resources, and exact Codex reauthorization commands.
+Domain request tools create approval-pending actions only; they never approve
+or dispatch provider changes.
 
 Inspection and cleanup are local and read-only. Recommendation sends only a
 bounded, value-free `RepositoryProfileV1` to the shared catalog policy.

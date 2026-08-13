@@ -22,6 +22,21 @@ The response contains setup for:
 
 Do not put a Wathba CLI token or project API key in the MCP host configuration.
 
+The base grant is intentionally limited to integration guidance. If the member
+explicitly asks to manage an existing domain, reauthorize with one of the exact
+least-privilege commands returned by `wathba mcp` under
+`domainManagement.commands`. Do not add domain scopes by default:
+
+- `mcp:domains:read` exposes six domain/DNS/name-server read and preview tools
+  plus three domain resources.
+- `mcp:domains:dns:request` exposes `request_domain_dns_change`.
+- `mcp:domains:nameservers:request` exposes
+  `request_domain_nameserver_change`.
+
+Both request tools stop at `approval_pending`. The member portal is the only
+approval surface, and MCP never registers or purchases a domain or dispatches
+a provider write.
+
 ## 2. Recommend a service and resolve a project
 
 From the repository root, run:
@@ -38,8 +53,9 @@ then repeat recommendation with `--project <projectId>`. Recommendation itself
 never enables a service or creates a project.
 
 Through MCP, `recommend_services_for_repository` uses the same profile and
-policy. MCP `create_project` is the only mutation and requires separately
-approved `projects:create`; never request it when a project already exists.
+policy. MCP `create_project` is the only project-creation mutation and requires
+separately approved `projects:create`; never request it when a project already
+exists.
 
 ## 3. Read project and service facts
 
@@ -80,9 +96,13 @@ Contract verification has no provider effect. Sandbox mode performs one
 governed real-sandbox probe and requires `--accept-provider-effect`.
 
 MCP itself can be tested safely by connecting MCP Inspector and listing all
-eight tools and three resources. Seven tools are read-only. Test
-`create_project` only in an approved no-project sandbox journey with a stable
-idempotency key; attempting an unknown or under-scoped mutation must fail.
+eight base tools and three base resources. Seven base tools are read-only. A
+domain-read grant adds six tools and three resources; each separately approved
+request scope adds one request tool. Test `create_project` only in an approved
+no-project sandbox journey with a stable idempotency key. Test domain requests
+only against a member-owned sandbox domain, and verify that they return an
+approval-pending portal handoff without provider dispatch. Unknown or
+under-scoped mutations must fail.
 
 ## 6. Hand off to the member
 
