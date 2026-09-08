@@ -39,6 +39,11 @@ keep commands, IDs, codes, URLs, and JSON fields in Latin script.
    return a test key, live key, or provider credential. Project creation is an
    explicit, idempotent sandbox-only action; production environments, keys, and
    production approval remain human portal actions.
+9. Treat `apiContractVersion` on the selected service binding as immutable
+   integration input. Never substitute the catalog default or newest version,
+   and never upgrade it as part of an ordinary CLI, SDK, capability, provider,
+   or production release. Send the exact pin as `Wathba-Version` on member-app
+   runtime calls and fail closed if the response version differs.
 
 ## Installation
 
@@ -249,6 +254,40 @@ capability operations`, validate a local JSON envelope with `wathba capability
 validate`, and run effect-free contract verification with:
 
 ```sh
+wathba capability api-contract inspect <serviceCode> \
+  --project <projectId> --environment <environmentId> --json --no-input
+```
+
+The binding-owned contract is the source of truth for generated runtime code.
+An upgrade is a separate member decision. In a sandbox environment, first run
+the target fixture and record its exact published digest, then create evidence
+and perform the compare-and-swap upgrade:
+
+```sh
+wathba capability api-contract preview <serviceCode> --target <version> \
+  --fixture-digest <sha256:digest> --project <projectId> \
+  --environment <sandboxEnvironmentId> --idempotency-key <key> --json --no-input
+wathba capability api-contract upgrade <serviceCode> --target <version> \
+  --binding-version <ownerVersion> --evidence <verificationEvidenceRef> \
+  --project <projectId> --environment <sandboxEnvironmentId> \
+  --idempotency-key <key> --json --no-input
+```
+
+Roll a sandbox binding back to the immediate prior version with `wathba
+capability api-contract rollback <serviceCode> --target <priorVersion>
+--binding-version <ownerVersion> ...`; rollback needs no evidence. Each
+`supportedTargets` entry from `inspect` states its `changeKind` (`upgrade` or
+`rollback`). An unknown target fails with `api_contract_version_unknown`; do
+not retry with a different version.
+
+Production upgrade and rollback are portal-only. They need a target-bound human
+step-up grant that only a web session can hold, so a CLI call cannot succeed.
+Direct the member to the trusted portal; never obtain, approve, or fabricate a
+grant on the member's behalf.
+
+Run effect-free contract verification with:
+
+```sh
 wathba capability verify <capabilityCode> --mode contract --project <projectId> --environment <environmentId> --idempotency-key <stable-key> --json --no-input
 ```
 
@@ -284,19 +323,28 @@ agent must not invoke them or seek a broader token.
 The runtime path is member app → Wathba → server-side provider credential →
 provider → normalized response. The agent never calls the provider directly.
 
-## Project domains
+## Member domains
 
 Domain registration, legal-profile entry, search, purchase confirmation, and
 approval live in the member portal. They are control-plane operations, so do
 not run `wathba integrate domains.management` and never ask for a national ID,
 CR number, supporting document, provider credential, or payment detail.
 
-The CLI can read project domains and normalized DNS/name-server state. It may
-preview and request one exact DNS record change or one exact name-server
-replacement. A request returns `outcome: approval_required`, an immutable
-action reference, and the canonical member-portal URL. It is not provider
-success. Never claim completion until `wathba domain action get` reports the
-owner-confirmed terminal state.
+The CLI can read the member-owned domain portfolio and subscription metadata,
+optionally filter the portfolio by project, and read normalized DNS/name-server
+state. It may preview and request one exact DNS record change or one exact
+name-server replacement. A request returns `outcome: approval_required`, an
+immutable action reference, and the canonical member-portal URL. It is not
+provider success. Use the bounded `wathba domain action wait` or
+`wathba domain action get`; never claim completion until the action reports
+`succeeded`.
+
+Every mutation requires the active attribution project and exact attachment
+version. The CLI cannot attach a domain, fund a wallet, accept Saudi terms,
+confirm a purchase, renew, or change auto-renew.
+
+`wathba domain open` is a credential-free handoff to the member portal. It
+never embeds acceptance, purchase, approval, or wallet authority.
 
 Use `references/domains.md` for the complete file shapes, preview/request
 sequence, idempotency rule, and portal handoff.

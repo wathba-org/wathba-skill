@@ -1,4 +1,4 @@
-# Wathba project-domain runbook
+# Wathba member-domain runbook
 
 Domain management is a member control-plane workflow. The member portal is the
 canonical surface for registrant profiles, suggestions, availability search,
@@ -12,8 +12,9 @@ integration work. Domain tools are deliberately excluded from that default.
 When the member explicitly asks for domain management, reauthorize the host
 with the exact least-privilege command from `domainManagement.commands`:
 
-- `mcp:domains:read` adds `list_project_domains`, `get_domain_dns_zone`,
-  `get_domain_nameservers`, both preview tools, and `get_domain_action`.
+- `mcp:domains:read` adds `list_member_domains`, `get_domain`,
+  `get_domain_subscription`, `get_domain_dns_zone`, `get_domain_nameservers`,
+  both preview tools, and `get_domain_action`.
 - `mcp:domains:dns:request` adds `request_domain_dns_change`.
 - `mcp:domains:nameservers:request` adds
   `request_domain_nameserver_change`.
@@ -26,15 +27,29 @@ only approval surface.
 ## Safe reads
 
 ```sh
-wathba domain list --project <projectId> --json --no-input
-wathba domain dns list <domainId> --project <projectId> --json --no-input
-wathba domain nameserver list <domainId> --project <projectId> --json --no-input
-wathba domain action get <actionId> --project <projectId> --json --no-input
+wathba domain list [--project <projectId>] --json --no-input
+wathba domain show <domainId> --json --no-input
+wathba domain subscription show <domainId> --json --no-input
+wathba domain dns list <domainId> --json --no-input
+wathba domain nameserver list <domainId> --json --no-input
+wathba domain action get <actionId> --json --no-input
+wathba domain action wait <actionId> --wait-timeout 2m --json --no-input
 ```
 
 Inspect `freshness`, owner versions, and the typed status. `stale`, `unknown`,
 an unrecognized schema, or a protocol error blocks a change. A provider
 acknowledgement is pending, not success.
+
+`domain subscription show` exposes only member-safe lifecycle, project
+attribution, expiry, and renewal-policy facts. A
+`renewalOperationStatus: not_certified` result means neither the CLI nor the
+portal may claim that renewal is available.
+
+Use `wathba domain open [<domainId>] [--project <projectId>]` only as a
+credential-free handoff to the matching Wathba member portal release. With
+`--json --no-input` it prints the validated URL without opening a browser. It
+does not carry a token and cannot register, purchase, renew, approve, fund, or
+accept terms.
 
 ## DNS change file
 
@@ -88,6 +103,7 @@ wathba domain dns preview <domainId> \
   --change ./dns-change.json \
   --domain-version <domainVersion> \
   --zone-version <zoneVersion> \
+  --attachment-version <attachmentVersion> \
   --project <projectId> --json --no-input
 ```
 
@@ -104,6 +120,7 @@ wathba domain dns request <domainId> \
   --change ./dns-change.json \
   --domain-version <domainVersion> \
   --zone-version <zoneVersion> \
+  --attachment-version <attachmentVersion> \
   --preview-digest sha256:<hex> \
   --idempotency-key <stable-key> \
   --project <projectId> --json --no-input
@@ -130,12 +147,14 @@ wathba domain nameserver preview <domainId> \
   --servers ./name-servers.json \
   --domain-version <domainVersion> \
   --zone-version <zoneVersion> \
+  --attachment-version <attachmentVersion> \
   --project <projectId> --json --no-input
 
 wathba domain nameserver request <domainId> \
   --servers ./name-servers.json \
   --domain-version <domainVersion> \
   --zone-version <zoneVersion> \
+  --attachment-version <attachmentVersion> \
   --preview-digest sha256:<hex> \
   --idempotency-key <stable-key> \
   --project <projectId> --json --no-input
@@ -148,12 +167,20 @@ A successful request returns `outcome: approval_required`,
 to the member. Do not open it, approve it, or request approval authority for the
 agent. The portal re-reads and displays the server-held immutable diff.
 
-After the member decides, poll the same action id. `provider_accepted` and
-`converging` remain pending. Only `succeeded` means an authenticated provider
-re-read observed the intended DNS or name-server state. `outcome_unknown`
+After the member decides, run `wathba domain action wait <actionId>` with a
+bounded `--wait-timeout`, or poll with `domain action get`. `provider_accepted`
+and `converging` remain pending. Only `succeeded` means an authenticated
+provider re-read observed the intended DNS or name-server state. `unknown`
 requires Wathba reconciliation; never submit a second provider mutation as a
-probe.
+probe. The wait command times out with a non-zero exit and never retries,
+approves, or dispatches provider work.
 
 Never put national IDs, CR numbers, supporting documents, payment details,
 provider credentials, provider tokens, raw provider payloads, or authorization
 cookies in a change file, command, prompt, log, or agent-visible output.
+
+The portfolio is member owned. `--project` on `domain list` is only a filter;
+it never changes ownership. Mutation previews and requests require the active
+project attachment and its exact version for attribution. The CLI cannot attach
+or detach a domain, fund a wallet, accept Saudi terms, confirm a purchase,
+renew, or change auto-renew.

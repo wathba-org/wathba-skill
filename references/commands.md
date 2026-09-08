@@ -131,21 +131,29 @@ Register, verify, and disable are state-changing and require
 redacted; endpoint listings expose a URL hash, never the raw URL. See
 `references/webhooks.md`.
 
-## Project domains
+## Member domains
 
-- `wathba domain list --project <projectId>`
-- `wathba domain dns list <domainId> --project <projectId>`
-- `wathba domain dns preview <domainId> --change <file> --domain-version <n> --zone-version <n> --project <projectId>`
-- `wathba domain dns request <domainId> --change <file> --domain-version <n> --zone-version <n> --preview-digest <sha256> --idempotency-key <stable-key> --project <projectId>`
-- `wathba domain nameserver list <domainId> --project <projectId>`
-- `wathba domain nameserver preview <domainId> --servers <file> --domain-version <n> --zone-version <n> --project <projectId>`
-- `wathba domain nameserver request <domainId> --servers <file> --domain-version <n> --zone-version <n> --preview-digest <sha256> --idempotency-key <stable-key> --project <projectId>`
-- `wathba domain action get <actionId> --project <projectId>`
+- `wathba domain list [--project <projectId>]`
+- `wathba domain show <domainId>`
+- `wathba domain open [<domainId>] [--project <projectId>]`
+- `wathba domain subscription show <domainId>`
+- `wathba domain dns list <domainId>`
+- `wathba domain dns preview <domainId> --change <file> --domain-version <n> --zone-version <n> --attachment-version <n> --project <projectId>`
+- `wathba domain dns request <domainId> --change <file> --domain-version <n> --zone-version <n> --attachment-version <n> --preview-digest <sha256> --idempotency-key <stable-key> --project <projectId>`
+- `wathba domain nameserver list <domainId>`
+- `wathba domain nameserver preview <domainId> --servers <file> --domain-version <n> --zone-version <n> --attachment-version <n> --project <projectId>`
+- `wathba domain nameserver request <domainId> --servers <file> --domain-version <n> --zone-version <n> --attachment-version <n> --preview-digest <sha256> --idempotency-key <stable-key> --project <projectId>`
+- `wathba domain action get <actionId>`
+- `wathba domain action wait <actionId> [--wait-timeout <duration>] [--poll-interval <duration>]`
 
-The CLI reads and proposes only. It has no registration, purchase, approval,
+The CLI reads and proposes only. Member ownership is separate from project
+attribution; `--project` on list is only a filter, while mutations pin the
+active attachment version. It has no registration, purchase, approval,
 dispatch, registrant-profile, national-ID, CR, document, or provider-credential
 command. Request output is `approval_required`; the member reviews and decides
-the immutable action in the returned portal URL. See `references/domains.md`.
+the immutable action in the returned portal URL. `domain open` is a
+credential-free portal handoff, subscription reads are safe metadata only, and
+action wait is bounded read-only polling. See `references/domains.md`.
 
 ## Updates
 

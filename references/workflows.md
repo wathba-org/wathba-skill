@@ -27,15 +27,16 @@ explicitly asks to manage an existing domain, reauthorize with one of the exact
 least-privilege commands returned by `wathba mcp` under
 `domainManagement.commands`. Do not add domain scopes by default:
 
-- `mcp:domains:read` exposes six domain/DNS/name-server read and preview tools
-  plus three domain resources.
+- `mcp:domains:read` exposes seven member-domain/DNS/name-server read and
+  preview tools plus four domain resources.
 - `mcp:domains:dns:request` exposes `request_domain_dns_change`.
 - `mcp:domains:nameservers:request` exposes
   `request_domain_nameserver_change`.
 
 Both request tools stop at `approval_pending`. The member portal is the only
 approval surface, and MCP never registers or purchases a domain or dispatches
-a provider write.
+a provider write. Portfolio reads are member scoped; project selection is only
+an optional list filter or a required mutation-attribution pin.
 
 ## 2. Recommend a service and resolve a project
 
@@ -97,7 +98,7 @@ governed real-sandbox probe and requires `--accept-provider-effect`.
 
 MCP itself can be tested safely by connecting MCP Inspector and listing all
 eight base tools and three base resources. Seven base tools are read-only. A
-domain-read grant adds six tools and three resources; each separately approved
+domain-read grant adds seven tools and four resources; each separately approved
 request scope adds one request tool. Test `create_project` only in an approved
 no-project sandbox journey with a stable idempotency key. Test domain requests
 only against a member-owned sandbox domain, and verify that they return an
