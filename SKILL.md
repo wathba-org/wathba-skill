@@ -131,7 +131,7 @@ wathba workspace show --json --no-input
 wathba project select <projectId> --environment <environmentId> --json
 ```
 
-The backend assigns the fixed `member_workspace.v3` profile; login never accepts
+The backend assigns the fixed `member_workspace.v4` profile; login never accepts
 raw scopes or a selectable profile. Tokens stay in the OS keychain. Workspace
 commands reject `--token` and `WATHBA_TOKEN`. MCP uses a separate OAuth
 authorization flow and the narrow `mcp:read` scope. In a manual agent run
@@ -280,10 +280,14 @@ capability api-contract rollback <serviceCode> --target <priorVersion>
 `rollback`). An unknown target fails with `api_contract_version_unknown`; do
 not retry with a different version.
 
-Production upgrade and rollback are portal-only. They need a target-bound human
-step-up grant that only a web session can hold, so a CLI call cannot succeed.
-Direct the member to the trusted portal; never obtain, approve, or fabricate a
-grant on the member's behalf.
+For production upgrades, use the delegated `plan`, `prepare`, `apply`, and
+`recover` commands described in [project compatibility](references/project-compatibility.md).
+Test both app versions and retain a deployable fallback before preparing the
+plan. Explain the exact update and live-app risk, then obtain explicit member
+confirmation in the conversation. The authenticated agent attests that
+confirmation; there is no second portal approval. Existing sessions do not gain
+upgrade permission automatically. Never fabricate confirmation or retry an
+ambiguous financial operation with a different version or idempotency key.
 
 Run effect-free contract verification with:
 
@@ -403,3 +407,10 @@ deduplication, and authoritative state confirmation.
 - `references/webhooks.md` — member webhook runbook: endpoint registration,
   signature verification, deduplication, and delivery inspection.
 - `references/arabic-glossary.md` — Arabic intent mapping and response style.
+
+
+For API upgrades, follow `references/project-compatibility.md`. Use the delegated
+prepare/apply/recover flow across services and languages. Explain production
+risk, preserve and test the previous app implementation, and obtain one explicit
+member confirmation for the exact plan in the conversation. Never manufacture
+`--member-confirmed`; no second portal approval is required for this flow.
