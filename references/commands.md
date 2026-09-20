@@ -71,7 +71,13 @@ The service surface is read-only:
 - `wathba service skill <serviceCode> --project <projectId>`
 - `wathba service recommend --project-dir <dir> [--target <app>] [--project <projectId>]`
 
-Authenta/Authentica and Torod are enabled once per member by a Wathba operator.
+Historical Authenta (`messaging.otp.authenta`) and Torod use member-wide operator
+enablement. Authentica reseller (`messaging.otp.authentica`) requires the exact
+project/environment setup in the member portal. `service status` and
+`service wait` read its project binding, never historical Authenta enablement.
+An active binding reports `ENABLED` and `runtimeReadiness: unchecked`; provider
+readiness and Wallet funds remain separate runtime checks. Follow the returned
+project action for other states; do not substitute another service code.
 Moyasar is enabled per project. There are no CLI setup, browser-open,
 reconcile, activation, deactivation, provider-readiness, or funding commands.
 

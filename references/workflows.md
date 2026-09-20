@@ -68,6 +68,12 @@ Call `list_projects`, select the exact project ID, then call
 Treat returned service, skill, operation, cost, limit, and environment pins as
 authoritative. Missing, ambiguous, mismatched, or unknown facts fail closed.
 
+For Authentica reseller, require `messaging.otp.authentica` and its exact project
+and environment binding. Follow [the Authentica integration boundary](authentica.md).
+Do not infer enablement from historical Authenta or managed OTP. Both Wathba
+environment kinds use the provider's live service, so a sandbox label alone is
+not permission for a free test or a real message.
+
 ## 4. Resolve the exact integration bundle
 
 ```sh

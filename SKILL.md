@@ -161,9 +161,17 @@ wathba project create --name <name> --repository-profile-digest <digest> --idemp
 First read the live service inventory. Wathba backoffice operators complete
 provider onboarding and enable services returned there:
 
-- Authenta/Authentica and Torod: enable once for the member; all member projects
-  can use them.
+- Historical Authenta (`messaging.otp.authenta`) and Torod: operator enablement
+  is member-wide. This does not activate the new Authentica reseller service.
+- Authentica reseller (`messaging.otp.authentica`): the member configures the
+  selected project and environment in the portal. Its provider application is
+  linked to that exact scope; another project's setup is not sufficient.
 - Moyasar-backed payments: enable separately for each project.
+
+Managed OTP (`messaging.otp.wathba`) remains the default for `messaging.otp`.
+Never substitute it or historical Authenta when Authentica reseller is requested.
+Follow [the Authentica integration boundary](references/authentica.md) and the
+selected service's live, pinned guidance. An absent service is unavailable.
 
 The member/agent commands are read-only:
 
@@ -176,8 +184,10 @@ wathba service recommend --project-dir . --project <projectId> --json --no-input
 ```
 
 If the live inventory contains the service but it is not enabled, report the
-exact operator action from the output. Do not claim the member can fix it from
-the CLI. Status and wait never mutate provider state.
+returned operator or project-portal action. Authentica status reads only its
+exact project/environment binding and reports `runtimeReadiness: unchecked`;
+an active binding does not replace provider, funding or signed-bundle checks.
+Status and wait never mutate provider state.
 
 ## Use the hosted MCP
 
