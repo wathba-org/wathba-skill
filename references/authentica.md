@@ -21,7 +21,11 @@ the blocker; do not switch providers or reuse another project's application.
 
 The member enables and configures the service in the selected project's portal:
 application name, default channel, optional distinct fallback, and code validity.
-Application creation must link to that project and environment. Settings and
+Authentica is Live-only: setup happens in the project's Live (`production`)
+environment, and the portal creates Live first when the project has none.
+Application creation must link to that project and its Live environment. If the
+portal shows "Retry setup", the member can resume a setup that stopped; it never
+creates a second application. Settings and
 templates remain governed by current server capabilities; do not invent provider
 features, sender registration, template sharing controls, or WhatsApp templates.
 `service status` and `service wait` read the exact project/environment binding.
@@ -73,14 +77,18 @@ authoritatively resolved. A definite rejection must not become an accepted-send
 charge. Unsupported or unpriced channels and paid fallback stay unavailable
 until the live contract allows them.
 
-Authentica has no separate test environment for this integration. Both Wathba
-environment kinds can use the live provider. Contract checks must stay effect-free.
+Authentica has no test mode, so Wathba offers it only in a project's Live
+environment. New Test setups are refused with `authentica_live_only`; use the
+Live environment ID and a Live API key. Contract checks must stay effect-free.
 Live acceptance requires an explicitly authorized recipient/channel, bounded
 spend, current readiness, and the published approval path. Do not assume a legacy
 `--mode sandbox` command supports paid-live Authentica verification.
 
-Backoffice chooses testing funding per member and posts it to the existing
-Wallet. There is no separate Authentica wallet or automatic free testing grant.
+Each project gets five free live tests. The member runs them from the portal's
+"Run a live test" sheet and Wathba pays for them; an API or CLI send is always
+charged to the Wallet. No operator step or spending policy is needed to send:
+the Wallet balance and each request's `maxCostSar` bound the spend, and an
+operator-set spending policy, when one exists, still applies.
 
 ## Report evidence precisely
 

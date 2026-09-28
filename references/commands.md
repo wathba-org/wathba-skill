@@ -1,6 +1,10 @@
 # Wathba CLI command reference
 
-Use `--json` for deterministic envelopes and `--no-input` for agent runs.
+Every command writes exactly one JSON object (`wathba.output.v1` on stdout or
+`wathba.error.v1` on stderr) carrying `notices`, `noticesMore`,
+`noticesStatus`, `noticesCoverage`, and `noticePolicy`. `--json` is a
+compatibility alias; `--json=false`, `WATHBA_OUTPUT=text`, and `output: text`
+return `CONFIGURATION_UNSUPPORTED`. Use `--no-input` for agent runs.
 Global context flags include `--project`, `--environment`, `--api-url`,
 `--config`, `--timeout`, and `--idempotency-key`. Flag values override
 environment variables, which override non-secret config.
@@ -14,7 +18,16 @@ environment variables, which override non-secret config.
 - `wathba schema get <operationId>`
 - `wathba api operations`
 - `wathba api call <operationId> --input <file>`
-- `wathba completions bash|zsh|fish|powershell`
+- `wathba completions bash|zsh|fish|powershell --output <file>` (writes the
+  script to the file and returns its path, size, and digest)
+
+## Notices
+
+- `wathba notices list [--view attention|portfolio|focus] [--service <code>] [--limit 1-50] [--cursor <data.nextCursor>] [--portfolio-cursor <noticesCoverage.portfolioNextCursor>] [--locale en|ar]`
+
+`attention` (default) merges account, the `--project` focus, and every other
+authorized project. The page is in the envelope's notice fields; `data`
+carries `nextCursor`. Read-only.
 
 Raw calls accept only operations classified as agent-safe. Interactive-only,
 operator, provider-onboarding, and secret-bearing operations fail locally.
@@ -72,8 +85,8 @@ The service surface is read-only:
 - `wathba service recommend --project-dir <dir> [--target <app>] [--project <projectId>]`
 
 Historical Authenta (`messaging.otp.authenta`) and Torod use member-wide operator
-enablement. Authentica reseller (`messaging.otp.authentica`) requires the exact
-project/environment setup in the member portal. `service status` and
+enablement. Authentica reseller (`messaging.otp.authentica`) requires the exact project's
+Live environment setup in the member portal (Authentica is Live-only). `service status` and
 `service wait` read its project binding, never historical Authenta enablement.
 An active binding reports `ENABLED` and `runtimeReadiness: unchecked`; provider
 readiness and Wallet funds remain separate runtime checks. Follow the returned
@@ -90,11 +103,9 @@ reconcile, activation, deactivation, provider-readiness, or funding commands.
 
 `mcp` prints deterministic remote-MCP/OAuth setup for Replit, Claude Code,
 Codex, Inspector, and generic hosts. It does not authorize a host itself.
-The base grant requests only `mcp:read`. Its `domainManagement` block lists
-separately consented read, DNS-request, and name-server-request scopes, the
-scope-filtered tools/resources, and exact Codex reauthorization commands.
-Domain request tools create approval-pending actions only; they never approve
-or dispatch provider changes.
+The base grant requests only `mcp:read`. The guidance also reports
+`protocolVersion` (`2026-07-28`) and the JSON-only result format. The hosted
+MCP serves no domain tools for now.
 
 Inspection and cleanup are local and read-only. Recommendation sends only a
 bounded, value-free `RepositoryProfileV1` to the shared catalog policy.

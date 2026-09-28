@@ -5,23 +5,10 @@ canonical surface for registrant profiles, suggestions, availability search,
 quotes, registration, payment or sponsorship authority, and human approval.
 The CLI and hosted MCP never call Souq T2 directly.
 
-## Hosted MCP authorization
+## Hosted MCP
 
-Run `wathba mcp --json` and keep the base `mcp:read` grant for normal
-integration work. Domain tools are deliberately excluded from that default.
-When the member explicitly asks for domain management, reauthorize the host
-with the exact least-privilege command from `domainManagement.commands`:
-
-- `mcp:domains:read` adds `list_member_domains`, `get_domain`,
-  `get_domain_subscription`, `get_domain_dns_zone`, `get_domain_nameservers`,
-  both preview tools, and `get_domain_action`.
-- `mcp:domains:dns:request` adds `request_domain_dns_change`.
-- `mcp:domains:nameservers:request` adds
-  `request_domain_nameserver_change`.
-
-The request scopes require `mcp:domains:read`. They only create an immutable
-approval-pending action. They cannot approve, dispatch, register, purchase, or
-accept terms. The member portal re-reads the server-held diff and remains the
+The hosted MCP serves no domain tools for now; use the CLI commands below. Every
+request stops at an approval-pending action, and the member portal remains the
 only approval surface.
 
 ## Safe reads

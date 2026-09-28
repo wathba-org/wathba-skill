@@ -1,6 +1,26 @@
 # Wathba governed MCP and CLI agent-workspace workflow
 
-Use `--json` and normally `--no-input`. Keep credentials outside the agent.
+Every response is one JSON object; normally add `--no-input`. Keep
+credentials outside the agent.
+
+## 0. Check member-wide notices first
+
+After authentication, before any project work, read notices for the account
+and every authorized project, even when a project is already selected:
+
+```sh
+wathba notices list --json --no-input
+```
+
+Over MCP call `list_notices`. While `data.nextCursor` (MCP `result.nextCursor`)
+is set, repeat the same call (same view and project) with that `cursor` and no
+portfolio cursor; then continue `noticesCoverage.portfolioNextCursor` with
+`--view portfolio --portfolio-cursor <cursor>` until that is null too. Follow
+the `noticePolicy` in every response: report production blockers in any
+project in your next message, current-task blockers before dependent steps,
+other activation blockers and warnings at the next checkpoint, and info in
+summaries. Repeat this check after setup, activation, or verification, on a
+project switch, after remediation, and before the final handoff.
 
 ## 1. Discover MCP setup
 
@@ -22,21 +42,9 @@ The response contains setup for:
 
 Do not put a Wathba CLI token or project API key in the MCP host configuration.
 
-The base grant is intentionally limited to integration guidance. If the member
-explicitly asks to manage an existing domain, reauthorize with one of the exact
-least-privilege commands returned by `wathba mcp` under
-`domainManagement.commands`. Do not add domain scopes by default:
-
-- `mcp:domains:read` exposes seven member-domain/DNS/name-server read and
-  preview tools plus four domain resources.
-- `mcp:domains:dns:request` exposes `request_domain_dns_change`.
-- `mcp:domains:nameservers:request` exposes
-  `request_domain_nameserver_change`.
-
-Both request tools stop at `approval_pending`. The member portal is the only
-approval surface, and MCP never registers or purchases a domain or dispatches
-a provider write. Portfolio reads are member scoped; project selection is only
-an optional list filter or a required mutation-attribution pin.
+The base grant is intentionally limited to integration guidance. The hosted MCP
+serves no domain tools for now; use the `wathba domain` CLI runbook for
+member-domain work.
 
 ## 2. Recommend a service and resolve a project
 
@@ -61,7 +69,10 @@ exists.
 ## 3. Read project and service facts
 
 Call `list_projects`, select the exact project ID, then call
-`get_project_setup` and `list_project_services`. For a selected service, call
+`get_project_setup` and `list_project_services`. Configured services are in
+`configuredServices`; services the member can still add are in
+`availableServices`, each with `canEnable`, `blockers`, and the portal URL where
+the member enables it. For a selected service, call
 `get_service_integration_docs`, `get_service_operations`, and
 `get_service_troubleshooting` as needed.
 
@@ -69,10 +80,11 @@ Treat returned service, skill, operation, cost, limit, and environment pins as
 authoritative. Missing, ambiguous, mismatched, or unknown facts fail closed.
 
 For Authentica reseller, require `messaging.otp.authentica` and its exact project
-and environment binding. Follow [the Authentica integration boundary](authentica.md).
-Do not infer enablement from historical Authenta or managed OTP. Both Wathba
-environment kinds use the provider's live service, so a sandbox label alone is
-not permission for a free test or a real message.
+and Live environment binding (Authentica is Live-only). Follow [the Authentica integration boundary](authentica.md).
+Do not infer enablement from historical Authenta or managed OTP. Authentica has
+no test mode: every API send is a real, charged message, so no environment
+label is permission for a free test or a real message. The five free live tests
+per project run only from the member's own portal session.
 
 ## 4. Resolve the exact integration bundle
 
@@ -102,14 +114,11 @@ wathba capability verify <capabilityCode> --mode contract --idempotency-key <sta
 Contract verification has no provider effect. Sandbox mode performs one
 governed real-sandbox probe and requires `--accept-provider-effect`.
 
-MCP itself can be tested safely by connecting MCP Inspector and listing all
-eight base tools and three base resources. Seven base tools are read-only. A
-domain-read grant adds seven tools and four resources; each separately approved
-request scope adds one request tool. Test `create_project` only in an approved
-no-project sandbox journey with a stable idempotency key. Test domain requests
-only against a member-owned sandbox domain, and verify that they return an
-approval-pending portal handoff without provider dispatch. Unknown or
-under-scoped mutations must fail.
+MCP itself can be tested safely by connecting MCP Inspector in Modern
+(`2026-07-28`) mode and listing all nine base tools. Every base tool except
+`create_project` is read-only. Test `create_project` only in an approved no-project sandbox
+journey with a stable idempotency key. Unknown or under-scoped mutations must
+fail.
 
 ## 6. Hand off to the member
 
@@ -118,7 +127,10 @@ Report:
 - which project, environment, service, skill pin, and operation contract were
   used;
 - which local tests passed;
-- what the member must do in the portal.
+- what the member must do in the portal;
+- the current notices for every authorized project from a fresh
+  `wathba notices list` (or `list_notices`), including whether the check was
+  complete.
 
 The member creates the production environment, completes production approval,
 creates the one-time key, stores it directly in the trusted server secret
