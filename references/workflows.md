@@ -90,10 +90,12 @@ per project run only from the member's own portal session.
 
 ```sh
 wathba integrate inspect --project-dir . --json --no-input
-wathba integrate <capabilityCode> --project-dir . --project <projectId> --environment <environmentId> --json --no-input
+wathba integrate <capabilityCode> --project-dir . --project <projectId> --environment <environmentId> --service <serviceCode> --json --no-input
 ```
 
-Inspection does not upload or modify repository content. It recognizes
+Pass the exact `serviceCode` from the discovered service pin; without
+`--service` the CLI falls back to its built-in default service, and it selects
+the bundle contract version from the service. Inspection does not upload or modify repository content. It recognizes
 TypeScript, JavaScript, Python, Java, Go, PHP, .NET, cURL-oriented, and unknown
 projects. `integrate` checks the exact project/environment/service/capability
 pins, signed artifacts, readiness, recipe, and verification profile, then
@@ -107,8 +109,8 @@ trusted server-side code. Inspect the pinned runtime projection with `wathba
 capability operations`, then validate local JSON without uploading it:
 
 ```sh
-wathba capability validate <capabilityCode> --operation <operationId> --request request.json --project <projectId> --environment <environmentId> --json --no-input
-wathba capability verify <capabilityCode> --mode contract --idempotency-key <stable-key> --project <projectId> --environment <environmentId> --json --no-input
+wathba capability validate <capabilityCode> --operation <operationId> --request request.json --project <projectId> --environment <environmentId> --service <serviceCode> --json --no-input
+wathba capability verify <capabilityCode> --mode contract --idempotency-key <stable-key> --project <projectId> --environment <environmentId> --service <serviceCode> --json --no-input
 ```
 
 Contract verification has no provider effect. Sandbox mode performs one

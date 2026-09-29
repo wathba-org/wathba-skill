@@ -38,7 +38,11 @@ published integration bundle before using the service.
 ## Patch the member application's server
 
 Install only the trusted, compatible integration bundle and recipe selected for
-the exact service, project, and environment. Use its published SDK version or
+the exact service, project, and environment. Through the CLI that is `wathba
+integrate messaging.otp --project-dir . --project <projectId> --environment
+<liveEnvironmentId> --service messaging.otp.authentica --json --no-input`; the
+CLI then selects contract version 4. Without `--service` it falls back to
+managed `messaging.otp.wathba`, which is the wrong service. Use its published SDK version or
 HTTP contract. A source branch, example, or unreleased SDK is not a release pin.
 
 The finished runtime path is **member app → Wathba → Authentica**. Keep Wathba

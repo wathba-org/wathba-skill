@@ -129,7 +129,8 @@ the CLI does not certify a `READY` state.
 
 When the signed Catalog 017 pin is published and resolved, `wathba capability
 verify payments.checkout --project <projectId> --environment <environmentId>
---mode contract --idempotency-key <stable-key> --json --no-input` consumes
+--service <serviceCode> --mode contract --idempotency-key <stable-key> --json
+--no-input` consumes
 `verify_payments_checkout_017`. Its required checks are `activation`, `scope`,
 `payment_intent_contract`, `checkout_token_delivery`, `method_readiness`,
 `payment_link_authorization`, `provider_readiness`, `webhook_delivery`, and
@@ -137,7 +138,7 @@ verify payments.checkout --project <projectId> --environment <environmentId>
 retain their own verification profiles.
 
 `wathba integrate payments.checkout --project-dir . --project <projectId>
---environment <environmentId> --json --no-input` resolves the exact version 2
-bundle and installs its signed skill and server recipe. It does not tokenize a
+--environment <environmentId> --service <serviceCode> --json --no-input`
+resolves the exact pinned bundle for the discovered service and installs its signed skill and server recipe. It does not tokenize a
 card, execute a payment or refund, expose credentials, or bypass signed skill
 trust and verification.

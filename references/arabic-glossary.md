@@ -12,10 +12,10 @@ codes, capability codes, URLs, and JSON fields in Latin script.
 | وش الخدمات؟ | List services | `wathba service list --json --no-input` |
 | فعّل / شغّل Torod أو Authenta | Enable member service | check `service status`; explain that a Wathba operator enables it once for the member |
 | فعّل Moyasar / الدفع | Enable payments | check `service status`; explain that a Wathba operator enables it for this project |
-| اربط الدفع / الرسائل / الشحن بتطبيقي | Integrate capability | run `wathba service recommend`, resolve the exact project/environment, then run the pinned `wathba integrate <capabilityCode>` flow |
+| اربط الدفع / الرسائل / الشحن بتطبيقي | Integrate capability | run `wathba service recommend`, resolve the exact project/environment/service, then run the pinned `wathba integrate <capabilityCode> --service <serviceCode>` flow |
 | كمّل / واصل | Continue | re-read the pinned MCP guide and continue the repository's own implementation plan |
 | وش صار؟ / وين وصلنا؟ | Status | report local tests plus current `get_project_setup` and `get_service_integration_docs` facts |
-| تحقق / اختبر | Verify | run repository tests and effect-free `wathba capability verify <capabilityCode> --mode contract` |
+| تحقق / اختبر | Verify | run repository tests and effect-free `wathba capability verify <capabilityCode> --mode contract --service <serviceCode>` |
 | رجّع / استرجع المبلغ | Refund | request the normalized refund with an `Idempotency-Key`, then poll its status (see `references/payments.md`) |
 | المفتاح انكشف | Contain key | direct the authorized human to contain and replace it in the protected portal |
 | افحص المشكلة | Diagnose | `wathba doctor --json` plus the relevant read-only status |

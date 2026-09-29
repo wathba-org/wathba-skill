@@ -27,10 +27,11 @@ Detection uses familiar repository markers such as `package.json`,
 `composer.json`, and `*.csproj`. It does not require a specific framework or
 package manager.
 
-After recommendation and explicit project/environment selection, run `wathba
-integrate <capabilityCode> --project-dir . --project <projectId> --environment
-<environmentId> --json --no-input`. It authenticates the exact pinned version 2
-bundle and signed skill. Do not reuse an old SDK version, service mapping, or
+After recommendation and explicit project/environment/service selection, run
+`wathba integrate <capabilityCode> --project-dir . --project <projectId>
+--environment <environmentId> --service <serviceCode> --json --no-input`. It
+authenticates the exact pinned bundle (the CLI selects its contract version
+from the service) and signed skill. Do not reuse an old SDK version, service mapping, or
 operation list from a local file.
 
 ## API contract compatibility

@@ -313,7 +313,7 @@ operation, or production status.
 ```sh
 wathba integrate inspect --project-dir . --json --no-input
 wathba service recommend --project-dir . --json --no-input
-wathba integrate <capabilityCode> --project-dir . --project <projectId> --environment <environmentId> --json --no-input
+wathba integrate <capabilityCode> --project-dir . --project <projectId> --environment <environmentId> --service <serviceCode> --json --no-input
 ```
 
 Inspection is local and read-only. Recommendation sends only the strict,
@@ -322,10 +322,16 @@ feature signals, architecture booleans, and environment-variable names. It
 never sends source, file contents, absolute paths, `.env` values, credentials,
 git data, or archives, and it never enables a service.
 
-`integrate` retrieves and strictly validates the same
-`AgentIntegrationBundleV2` used by MCP, checks every project/environment/
+`integrate` retrieves and strictly validates the same versioned bundle used by
+MCP (`AgentIntegrationBundleV2`; the CLI selects contract version 4 for
+Authentica `messaging.otp.authentica` and 3 for Ejar `realestate.ejar` from the
+service and never downgrades), checks every project/environment/
 service/capability/artifact pin, and installs the exact trusted skill by
-default. It never patches member application code, uploads the repository,
+default. Always pass the exact `serviceCode` from the discovered service pin as
+`--service`, here and to `capability operations`, `validate`, and `verify`: one
+capability can have several services (`messaging.otp` has
+`messaging.otp.wathba` and `messaging.otp.authentica`), and without `--service`
+the CLI falls back to its built-in default service. It never patches member application code, uploads the repository,
 executes a runtime operation, or tracks progress. Use `--no-install-skill` to
 preview the signed install command without writing a skill.
 
@@ -374,7 +380,7 @@ ambiguous financial operation with a different version or idempotency key.
 Run effect-free contract verification with:
 
 ```sh
-wathba capability verify <capabilityCode> --mode contract --project <projectId> --environment <environmentId> --idempotency-key <stable-key> --json --no-input
+wathba capability verify <capabilityCode> --mode contract --project <projectId> --environment <environmentId> --service <serviceCode> --idempotency-key <stable-key> --json --no-input
 ```
 
 Sandbox verification causes a bounded real provider effect and therefore also

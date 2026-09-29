@@ -66,9 +66,9 @@ token files are prohibited.
 - `wathba capability list --project <projectId> [--environment <environmentId>]`
 - `wathba capability status <capabilityCode> --project <projectId> [--environment <environmentId>]`
 - `wathba capability skill <capabilityCode>`
-- `wathba capability operations <capabilityCode> --project <projectId> --environment <environmentId>`
-- `wathba capability validate <capabilityCode> --operation <operationId> --request <file> --project <projectId> --environment <environmentId>`
-- `wathba capability verify <capabilityCode> --mode contract|sandbox --idempotency-key <stable-key> --project <projectId> --environment <environmentId>`
+- `wathba capability operations <capabilityCode> --project <projectId> --environment <environmentId> --service <serviceCode>`
+- `wathba capability validate <capabilityCode> --operation <operationId> --request <file> --project <projectId> --environment <environmentId> --service <serviceCode>`
+- `wathba capability verify <capabilityCode> --mode contract|sandbox --idempotency-key <stable-key> --project <projectId> --environment <environmentId> --service <serviceCode>`
 
 Project creation is a dedicated keychain-workspace command. It creates one
 project plus one active sandbox and never creates a key, production resource,
@@ -98,7 +98,7 @@ reconcile, activation, deactivation, provider-readiness, or funding commands.
 
 - `wathba mcp [--api-url <url>]`
 - `wathba integrate inspect --project-dir <dir>`
-- `wathba integrate <capabilityCode> --project-dir <dir> --project <projectId> --environment <environmentId> [--no-install-skill]`
+- `wathba integrate <capabilityCode> --project-dir <dir> --project <projectId> --environment <environmentId> --service <serviceCode> [--no-install-skill]`
 - `wathba integrate cleanup --project-dir <dir>`
 
 `mcp` prints deterministic remote-MCP/OAuth setup for Replit, Claude Code,
@@ -109,8 +109,14 @@ MCP serves no domain tools for now.
 
 Inspection and cleanup are local and read-only. Recommendation sends only a
 bounded, value-free `RepositoryProfileV1` to the shared catalog policy.
-`integrate` retrieves and strictly checks the pinned version 2 bundle and
-installs its exact signed skill by default. It never uploads source, patches the
+`integrate` retrieves and strictly checks the pinned bundle and installs its
+exact signed skill by default. Pass the discovered `serviceCode` as `--service`
+to `integrate` and to `capability operations`, `validate`, and `verify`
+(`capability list`, `status`, and `skill` reject it); without it the CLI falls back
+to its built-in default service (managed `messaging.otp.wathba` for
+`messaging.otp`). The CLI selects the contract version from the service
+(Authentica 4, Ejar 3, others 2); never override or downgrade it with
+`--contract-version`. It never uploads source, patches the
 member app, executes a runtime operation, or tracks progress. Local validation
 uploads no request body. Sandbox verification requires
 `--accept-provider-effect`; contract verification has no provider effect.
