@@ -63,8 +63,10 @@ never enables a service or creates a project.
 
 Through MCP, `recommend_services_for_repository` uses the same profile and
 policy. MCP `create_project` is the only project-creation mutation and requires
-separately approved `projects:create`; never request it when a project already
-exists.
+separately approved `projects:create` (without it the tool returns
+`outcome: "authorization_required"` with `requiredScopes`; re-authorize with
+`mcp:read projects:create`, keeping any other current scopes); never request
+it when a project already exists.
 
 ## 3. Read project and service facts
 
@@ -73,8 +75,12 @@ Call `list_projects`, select the exact project ID, then call
 `configuredServices`; services the member can still add are in
 `availableServices`, each with `canEnable`, `blockers`, and the portal URL where
 the member enables it. For a selected service, call
-`get_service_integration_docs`, `get_service_operations`, and
-`get_service_troubleshooting` as needed.
+`get_service_integration_docs` once with the service's `integrationDocs`
+arguments: keep its project, environment, service, capability, and contract
+version pins, and set `stack` and `language` (`ar` or `en`) to the app's stack
+and the member's language when known (see `mcp.md`). The guide already contains
+the operations and troubleshooting; do not also call `get_service_operations`
+or `get_service_troubleshooting` for it.
 
 Treat returned service, skill, operation, cost, limit, and environment pins as
 authoritative. Missing, ambiguous, mismatched, or unknown facts fail closed.

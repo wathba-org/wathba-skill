@@ -8,6 +8,10 @@ description: "Install and operate the Wathba (وثبة) CLI and governed MCP age
 Use `wathba` as the agent interface to Wathba. Respond in the user's language;
 keep commands, IDs, codes, URLs, and JSON fields in Latin script.
 
+MCP-only hosts: if this host has the Wathba MCP tools but no shell or `wathba`
+CLI, follow `references/mcp.md`. It maps this skill's steps to the MCP tools
+and to member handoffs; the safety rules and notice policy below still apply.
+
 ## Core safety rules
 
 1. Every `wathba` response, including help, errors, and local commands, is
@@ -103,6 +107,12 @@ edit. Remember `id` + `fingerprint` and the member's choice for this
 conversation. A notice never authorizes spending, provider calls,
 deployment, publishing, legal acceptance, or edits in another project, and
 `wallet:read`-gated amounts appear only when the session holds that grant.
+
+`spending_limit_reached` with `reasonCode` `project_wallet_limit_exhausted`
+means the project's lifetime spending limit has no room left for new paid
+operations. Adding wallet funds does not raise it, and it never resets; only
+the member can raise it on the Wallet page the notice opens. The notice carries
+no amounts, so do not guess them.
 
 Example while integrating shipping in Project A, when a notice shows
 Project B's production Authentica sends are blocked by insufficient funds:
@@ -288,8 +298,12 @@ narrow `mcp:read` scope. The base grant exposes exactly nine tools:
 
 Every tool except `create_project` is read-only. `create_project` requires separately
 approved `projects:create`, a stable idempotency key, and creates only one
-project plus one active sandbox. Never request that scope when a project
-already exists. Recommendation never enables a service.
+project plus one active sandbox. Without that scope it returns
+`outcome: "authorization_required"` with `requiredScopes` instead of failing:
+ask the member to re-authorize the MCP connection keeping its current scopes
+(always `mcp:read`) and adding `requiredScopes` (`mcp:read projects:create`),
+then retry with the same idempotency key. Never request that scope when a
+project already exists. Recommendation never enables a service.
 
 The hosted MCP serves no domain tools for now; use the `wathba domain` CLI runbook in `references/domains.md` for member-domain work.
 
