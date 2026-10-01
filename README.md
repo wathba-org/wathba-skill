@@ -26,11 +26,15 @@ It installs the `wathba` binary plus this skill into `~/.agents/skills/wathba` a
 npx skills add wathba-org/wathba-skill
 ```
 
-### Developers: Claude Code plugin marketplace
+### Claude Code and Codex: the Wathba plugin
+
+The Wathba plugin connects Claude Code, Codex and other Agent Plugins clients to
+Wathba over MCP, with its own short MCP-only skill (not this CLI skill). It lives
+in [`wathba-org/wathba-plugin`](https://github.com/wathba-org/wathba-plugin):
 
 ```text
-/plugin marketplace add wathba-org/claude-plugins
-/plugin install wathba
+/plugin marketplace add wathba-org/wathba-plugin
+/plugin install wathba@wathba
 ```
 
 ## Contents
